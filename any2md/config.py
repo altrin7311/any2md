@@ -13,7 +13,7 @@ import tomli_w
 
 DEFAULTS: dict[str, object] = {
     "output_dir": "~/Any2MD-out",
-    "provider": "none",
+    "provider": "extractive",  # free, zero-setup summaries; "ollama" or "none" also valid
     "whisper_fallback": False,
 }
 

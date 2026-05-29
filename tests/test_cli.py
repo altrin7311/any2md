@@ -46,13 +46,22 @@ def test_convert_writes_file(tmp_config, monkeypatch):
     assert (out / "data.md").exists()
 
 
-def test_serve_stub():
-    result = runner.invoke(app, ["serve"])
+def test_serve_invokes_uvicorn(monkeypatch):
+    calls = {}
+
+    def fake_run(app_obj, host, port):
+        calls["host"], calls["port"] = host, port
+
+    import uvicorn
+
+    monkeypatch.setattr(uvicorn, "run", fake_run)
+    result = runner.invoke(app, ["serve", "--port", "9123"])
     assert result.exit_code == 0
-    assert "not implemented yet" in result.stdout
+    assert calls["port"] == 9123
 
 
-def test_no_args_prints_repl_stub():
-    result = runner.invoke(app, [])
+def test_no_args_launches_repl():
+    # No stdin → REPL reads EOF immediately and exits cleanly. Welcome banner shows.
+    result = runner.invoke(app, [], input="")
     assert result.exit_code == 0
-    assert "REPL not implemented yet" in result.stdout
+    assert "Obsidian markdown" in result.stdout  # tagline from the themed welcome

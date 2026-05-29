@@ -1,0 +1,15 @@
+# Railway deploy config. Builds the Dockerfile and serves over $PORT.
+#
+# Env vars to set in the Railway dashboard:
+#   ANY2MD_TOKEN     gate public access (clients send `Authorization: Bearer <token>`)
+#   ANY2MD_PROVIDER  summarizer; "extractive" (default, zero-setup) is Railway-safe
+#   ANY2MD_OUTPUT_DIR  where .md files are written (default /data)
+# No API keys exist — the whole stack is free/offline.
+
+[build]
+builder = "dockerfile"
+
+[deploy]
+startCommand = "any2md serve --host 0.0.0.0 --port $PORT"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

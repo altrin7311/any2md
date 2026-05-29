@@ -24,7 +24,7 @@ def test_set_persists_under_canonical_key(tmp_config):
 
 def test_defaults_when_unset(tmp_config):
     assert config.get("output_dir") == "~/Any2MD-out"
-    assert config.get("provider") == "none"
+    assert config.get("provider") == "extractive"  # free, zero-setup summaries by default
     assert config.get("whisper_fallback") is False
 
 

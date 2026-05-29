@@ -3,13 +3,33 @@
 from any2md.models import Document
 
 # Type-specific metadata keys lifted into frontmatter, in this fixed order.
-_META_LIFT = ("channel", "stars", "subreddit", "author", "license", "languages")
+# Note: "tags" is intentionally absent — that key is owned by the enricher's frontmatter line.
+_META_LIFT = (
+    "channel",
+    "stars",
+    "subreddit",
+    "author",
+    "handle",
+    "license",
+    "languages",
+    "authors",
+    "categories",
+    "score",
+    "comments",
+    "likes",
+    "lang",
+)
 
 # Body section heading per source type; default "Content".
 _SECTION = {
     "youtube": "Transcript",
     "github": "README",
     "reddit": "Thread",
+    "hackernews": "Discussion",
+    "stackoverflow": "Question",
+    "arxiv": "Abstract",
+    "wikipedia": "Article",
+    "twitter": "Tweet",
 }
 
 

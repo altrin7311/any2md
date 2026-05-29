@@ -16,11 +16,11 @@ within free/hobby limits; a shared token gates public access.
    - `GET /jobs/{id}/download` → the rendered `.md`
    - All routes require header `Authorization: Bearer $ANY2MD_TOKEN` when the env var is set;
      open if unset (local convenience).
-   - Wire `cli.py serve --port` → `uvicorn`. LLM key still from env; provider from config/env.
-2. `Dockerfile`: `python:3.11-slim` base, install system deps (`ffmpeg`, `tesseract-ocr`),
+   - Wire `cli.py serve --port` → `uvicorn`. On Railway, `provider=extractive` (no APIs/keys).
+2. `Dockerfile`: `python:3.11-slim` base, install system deps (`ffmpeg` for yt-dlp),
    `pip install .`, `ENTRYPOINT ["any2md"]`. Default CMD documented for serve.
-3. `railway.toml`: build from Dockerfile; start `any2md serve --port $PORT`. Document required
-   env vars (`ANY2MD_TOKEN`, one LLM key e.g. `GROQ_API_KEY`, `LLM_PROVIDER`).
+3. `railway.toml`: build from Dockerfile; start `any2md serve --port $PORT`. Document env
+   vars (`ANY2MD_TOKEN` to gate access, `ANY2MD_PROVIDER=extractive`). No API keys exist.
 4. `README.md`: usage for CLI (install, REPL, one-shot) AND deploy (docker run, Railway).
 
 ## TDD

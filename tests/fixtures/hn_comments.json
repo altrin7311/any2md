@@ -1,0 +1,4 @@
+{
+  "101": {"by": "alice", "id": 101, "time": 1160419000, "type": "comment", "text": "This is a great idea, congrats on the launch.", "kids": []},
+  "102": {"by": "bob", "id": 102, "time": 1160419500, "type": "comment", "text": "How is this different from an incubator?", "kids": []}
+}

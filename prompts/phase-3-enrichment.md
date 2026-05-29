@@ -1,38 +1,43 @@
-# Phase 3 — LLM enrichment (summary, tags, wikilinks)
+# Phase 3 — Enrichment (summary, tags, wikilinks) — no APIs, no keys
 
 ## Context
-Add the pluggable LLM layer that summarizes every input. Read `.claude/rules/tech-stack.md`
-(provider env vars), `output-format.md` (where summary/tags/wikilinks land). Depends on
-Phase 2 pipeline. **Hard constraint: never hard-fail on a missing key — `none` still works.**
+Add the pluggable summarizer layer that summarizes every input. Read
+`.claude/rules/tech-stack.md` (summarizers) and `output-format.md` (where summary/tags/
+wikilinks land). Depends on Phase 2 pipeline.
+**Hard constraint: no external APIs, no API keys. Enrichment is best-effort — `none` (or any
+summarizer error / unreachable Ollama) still produces full extraction-only output.**
 
 ## Goal
-Converted files gain a summary, `#tags`, and `[[wikilinks]]` when an LLM is configured;
-identical extraction-only output when `provider=none` or the key is absent.
+Converted files gain a summary, `#tags`, and `[[wikilinks]]` with **zero setup** (extractive
+default); identical extraction-only output when `provider=none`.
 
 ## Build
-1. `any2md/enrich/base.py`: `LLMProvider` ABC — `complete(prompt, system="") -> str`,
-   optional `describe_image(path) -> str | None`.
-2. `any2md/enrich/groq.py` (default) and `any2md/enrich/gemini.py`. Lazy-import the SDK so a
-   missing dep/key for one provider never breaks others. Read keys from env only.
-   (Cloudflare + Ollama may be stubbed with a clear `NotImplementedError` for a later pass.)
-3. `any2md/enrich/enricher.py`: `enrich(doc, provider)` — fills `doc.summary`, `doc.tags`,
-   `doc.wikilinks` in one or few calls. Long `body_markdown` chunked (or sent whole on
-   large-context providers). If `provider=none` or no key → return doc unchanged.
-   If a vision-capable provider is set and `source_type=image` → add a description.
-4. Replace the Phase 2 stub: pipeline now calls the real `enricher.enrich`.
-5. Provider selection from config/env in `config.py` + a `provider_from_config()` helper.
+1. `any2md/enrich/base.py`: `Summarizer` ABC — `summarize(title, body) -> dict`
+   returning `{"summary": str, "tags": list[str], "wikilinks": list[str]}`.
+2. `any2md/enrich/extractive.py` (**default**): pure-Python, no model/network/deps.
+   Frequency/TextRank-style — score sentences by content-word frequency (top few →
+   summary), frequent content words → tags, capitalized phrases → wikilinks. Safe on empty.
+3. `any2md/enrich/ollama.py` (optional): POST a JSON-format prompt to a local Ollama server
+   (`OLLAMA_URL` default `http://localhost:11434`, `OLLAMA_MODEL` default `llama3.2`) via
+   lazy `httpx`; parse `{summary, tags, wikilinks}`. No key. Unreachable → raises (caught).
+4. `any2md/enrich/providers.py`: `get_summarizer(name)` → `none`→None,
+   `extractive`→ExtractiveSummarizer, `ollama`→OllamaSummarizer, else ValueError.
+5. `any2md/enrich/enricher.py`: `enrich(doc, summarizer)` — fills `doc.summary/tags/wikilinks`;
+   `None` or any exception leaves doc unchanged (best-effort).
+6. Pipeline calls `enrich(doc, get_summarizer(provider))`. Default `provider=extractive`.
 
 ## TDD
-- `tests/test_enricher.py`: a `FakeProvider` returns canned summary/tags/wikilinks →
-  assert they land on the `Document` and in rendered output. Assert `provider=none`
-  leaves doc unchanged. Assert missing key path degrades gracefully (no exception).
-- No real API calls in tests — providers are injected/mocked.
+- `tests/test_enricher.py`: a `FakeSummarizer` returns canned values → assert they land on the
+  `Document` and in rendered output. `None` leaves doc unchanged. A raising summarizer is
+  swallowed (no exception). `ExtractiveSummarizer` produces non-empty output on prose and is
+  safe on empty. `get_summarizer` returns the right types and rejects removed/unknown names.
+- No network in tests (don't call a real Ollama server).
 
 ## Done when
 - `pytest -q` green; `ruff check .` clean.
-- With `GROQ_API_KEY` set + `provider=groq`: `any2md convert <file>` output has a real
-  summary + tags + wikilinks.
-- With `provider=none` (or key unset): same file converts, no summary section, no crash.
+- Default (`provider=extractive`): `any2md convert <file>` output has summary + tags +
+  wikilinks, with no setup and no network.
+- `provider=none`: same file converts, no summary section, no crash.
 
 ## Stop
-Show one enriched `.md` and one extraction-only `.md`. Wait for manual testing before Phase 4.
+Show one enriched `.md` (extractive) and one extraction-only `.md`. Wait before Phase 4.

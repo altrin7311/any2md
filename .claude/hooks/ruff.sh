@@ -2,7 +2,8 @@
 # PostToolUse hook: auto lint+format an edited Python file with ruff.
 # Safe no-op when ruff is absent or the edited file is not .py. Always exits 0.
 
-# Prefer the project venv's ruff; fall back to a global ruff. No-op if neither exists.
+# Prefer the project venv's ruff (matches the version used in CI/verification);
+# fall back to a global ruff. No-op if neither exists.
 if [ -x "${CLAUDE_PROJECT_DIR:-.}/.venv/bin/ruff" ]; then
   RUFF="${CLAUDE_PROJECT_DIR:-.}/.venv/bin/ruff"
 elif command -v ruff >/dev/null 2>&1; then

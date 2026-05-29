@@ -1,0 +1,12 @@
+{
+  "by": "pg",
+  "descendants": 2,
+  "id": 1,
+  "kids": [101, 102],
+  "score": 57,
+  "time": 1160418111,
+  "title": "Y Combinator",
+  "type": "story",
+  "url": "http://ycombinator.com",
+  "text": "How do you fund a startup? Here is the original Y Combinator announcement."
+}

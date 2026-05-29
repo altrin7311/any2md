@@ -1,0 +1,16 @@
+{
+  "items": [
+    {
+      "tags": ["java", "performance", "branch-prediction"],
+      "owner": {"display_name": "GManNickG"},
+      "is_answered": true,
+      "view_count": 1900000,
+      "answer_count": 26,
+      "score": 27000,
+      "creation_date": 1340805096,
+      "question_id": 11227809,
+      "title": "Why is processing a sorted array faster than processing an unsorted array?",
+      "body": "<p>Here is a piece of C++ code that seems very peculiar. For some strange reason, sorting the data miraculously makes the code almost six times faster.</p>"
+    }
+  ]
+}

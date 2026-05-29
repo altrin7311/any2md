@@ -1,0 +1,9 @@
+{
+  "full_name": "karpathy/nanoGPT",
+  "description": "The simplest, fastest repository for training/finetuning medium-sized GPTs.",
+  "stargazers_count": 38000,
+  "topics": ["gpt", "language-model", "pytorch"],
+  "license": {"spdx_id": "MIT"},
+  "created_at": "2022-12-28T00:00:00Z",
+  "updated_at": "2024-05-01T00:00:00Z"
+}

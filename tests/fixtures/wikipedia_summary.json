@@ -1,0 +1,11 @@
+{
+  "type": "standard",
+  "title": "Transformer (deep learning architecture)",
+  "description": "Machine learning architecture",
+  "extract": "A transformer is a deep learning architecture based on the multi-head attention mechanism, proposed in the 2017 paper \"Attention Is All You Need\". It has no recurrent units and requires less training time than earlier recurrent architectures.",
+  "lang": "en",
+  "timestamp": "2024-05-01T12:00:00Z",
+  "content_urls": {
+    "desktop": {"page": "https://en.wikipedia.org/wiki/Transformer_(deep_learning_architecture)"}
+  }
+}

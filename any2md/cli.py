@@ -31,7 +31,17 @@ def _root(
     ),
 ) -> None:
     if ctx.invoked_subcommand is None:
-        typer.echo("REPL not implemented yet")
+        import asyncio
+
+        from any2md.queue import JobQueue
+        from any2md.repl import Repl
+
+        repl = Repl(
+            queue=JobQueue(),
+            output_dir=str(config.get("output_dir")),
+            provider=str(config.get("provider")),
+        )
+        asyncio.run(repl.run())
 
 
 @app.command()
@@ -55,15 +65,30 @@ def convert(
 
     out = output or config.get("output_dir")
     provider = config.get("provider")
+
+    from rich.console import Console
+
+    from any2md.theme import gradient_text
+
+    console = Console()
     for item in targets:
         path = pipeline.convert(item, out, provider)
-        typer.echo(f"wrote {path}")
+        line = gradient_text("✓ wrote ", bold=True)
+        line.append(str(path), style="dim")
+        console.print(line)
 
 
 @app.command()
-def serve(port: int = typer.Option(8000, "--port", help="Port to serve on.")) -> None:
+def serve(
+    port: int = typer.Option(8000, "--port", help="Port to serve on."),
+    host: str = typer.Option("0.0.0.0", "--host", help="Bind address."),
+) -> None:
     """Run the HTTP server (for Docker/Railway)."""
-    typer.echo("not implemented yet")
+    import uvicorn
+
+    from any2md.server import create_app
+
+    uvicorn.run(create_app(), host=host, port=port)
 
 
 @config_app.command("set")

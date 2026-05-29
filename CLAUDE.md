@@ -121,13 +121,14 @@ Optional `any2md serve` exposes the same pipeline over HTTP for Docker / Railway
 
 ### Tech stack
 Python 3.11+ • Typer + Rich (CLI/REPL) • markitdown • yt-dlp • trafilatura • httpx •
-FastAPI (serve) • pytest + ruff. Pluggable LLM: **Groq** (default) / Gemini / Cloudflare /
-Ollama / `none`. Pins and env vars: `.claude/rules/tech-stack.md`.
+FastAPI (serve) • pytest + ruff. Pluggable summarizer: **`extractive`** (default, pure-Python
+TextRank-style, zero setup) / **`ollama`** (local model, no key) / **`none`** (extraction only).
+**No external APIs, no keys, ever.** Pins: `.claude/rules/tech-stack.md`.
 
 ### Hard Constraints (do not violate)
-- **100% free / open-source.** No paid APIs, no paid hosting tier required.
-- **Never hard-fail on a missing LLM key** — `provider=none` still does full extraction.
-- **API keys come from env vars only** — never written to `config.toml`.
+- **100% free / open-source.** No external APIs, no API keys, no paid hosting tier.
+- **Summarization is best-effort** — `none`, or any summarizer error/unreachable Ollama,
+  still produces full extraction-only output. Never hard-fail over enrichment.
 - **Output** is a flat, slugified `.md` with YAML frontmatter that always includes
   `source_url`, `source_type`, `extraction_date`, and `upload_date` when known.
   Schema: `.claude/rules/output-format.md`.
@@ -140,3 +141,4 @@ Ollama / `none`. Pins and env vars: `.claude/rules/tech-stack.md`.
 - `/phase <n>` — load and start a build phase from `prompts/` (stops at the phase boundary so you can test).
 - `/new-handler <source>` — scaffold a new `Handler` + fixture test (TDD), via the `handler-builder` agent.
 - `/checks` — run the test + lint suite (`ruff` + `pytest`).
+

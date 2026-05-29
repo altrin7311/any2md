@@ -1,0 +1,18 @@
+{
+  "items": [
+    {
+      "owner": {"display_name": "Mysticial"},
+      "is_accepted": true,
+      "score": 35000,
+      "answer_id": 11227902,
+      "body": "<p>You are a victim of branch prediction fail.</p><p>The processor tries to guess which way a branch will go before it is known.</p>"
+    },
+    {
+      "owner": {"display_name": "Daniel Fischer"},
+      "is_accepted": false,
+      "score": 4000,
+      "answer_id": 11228454,
+      "body": "<p>Branch prediction. With a sorted array, the condition is consistently true or false.</p>"
+    }
+  ]
+}

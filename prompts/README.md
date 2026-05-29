@@ -11,7 +11,7 @@ Contracts & conventions: `.claude/rules/`
 | 0 | `phase-0-scaffold.md` | Package, deps, Typer CLI shell, config stubs | `any2md --help`, `any2md config set output X` persists |
 | 1 | `phase-1-core-domain.md` | `Document`, `render()`, `writer`, `config` | Render a hand-built Document → `.md` file; unit tests green |
 | 2 | `phase-2-files-pipeline.md` | Registry, `Handler` base, files handler, pipeline e2e | `any2md convert sample.pdf` → `.md` with frontmatter |
-| 3 | `phase-3-enrichment.md` | `LLMProvider` ABC, Groq+Gemini, enricher, `none` fallback | Convert with/without `GROQ_API_KEY` — summary+tags appear / graceful skip |
+| 3 | `phase-3-enrichment.md` | `Summarizer` ABC, extractive (default) + ollama, enricher | Default convert adds summary/tags/wikilinks (zero setup); `none` = extraction-only |
 | 4 | `phase-4-online-handlers.md` | youtube, reddit, github, web handlers | `any2md convert <youtube/reddit/github/article url>` |
 | 5 | `phase-5-queue-repl.md` | Async queue, REPL slash-commands, progress, batch | `any2md` REPL: paste links, `/output`, `/jobs`, `/batch` |
 | 6 | `phase-6-serve-docker-railway.md` | FastAPI serve, Dockerfile, railway.toml, token auth | `docker build`, `serve` + curl, deploy to Railway |

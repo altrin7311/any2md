@@ -1,0 +1,43 @@
+[
+  {
+    "data": {
+      "children": [
+        {
+          "kind": "t3",
+          "data": {
+            "title": "What is Retrieval Augmented Generation?",
+            "selftext": "RAG combines a retriever with a language model. The retriever fetches relevant documents from a vector store. This grounds the model in factual data and reduces hallucination.",
+            "subreddit": "MachineLearning",
+            "author": "ml_enthusiast",
+            "score": 250,
+            "created_utc": 1716854400
+          }
+        }
+      ]
+    }
+  },
+  {
+    "data": {
+      "children": [
+        {
+          "kind": "t1",
+          "data": {
+            "author": "commenter_one",
+            "body": "Great explanation! RAG is transforming how we build AI applications.",
+            "score": 80,
+            "replies": ""
+          }
+        },
+        {
+          "kind": "t1",
+          "data": {
+            "author": "commenter_two",
+            "body": "Vector databases like Chroma and Pinecone are key components.",
+            "score": 45,
+            "replies": ""
+          }
+        }
+      ]
+    }
+  }
+]

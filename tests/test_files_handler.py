@@ -64,4 +64,4 @@ def test_registry_routes_local_file_to_files_handler(tmp_path):
 
 def test_registry_raises_when_no_handler_matches():
     with pytest.raises(ValueError):
-        registry.detect("https://example.com")  # no URL handler yet (Phase 4)
+        registry.detect("ftp://example.com/file")  # ftp not handled by any handler

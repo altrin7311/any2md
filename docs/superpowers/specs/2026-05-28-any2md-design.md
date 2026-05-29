@@ -34,21 +34,24 @@ for Docker/Railway deployment.
 | Output layout | Flat, slugified filenames in one folder | Obsidian graph prefers flat; configurable folder |
 | Frontmatter must include | `source_url`, `source_type`, `extraction_date`, `upload_date` | User requirement: track source + dates |
 | Summaries | Every input summarized | Quality priority |
-| LLM | Pluggable provider (Groq / Gemini / Cloudflare / Ollama / none) | Free tiers; `none` = extraction-only fallback |
-| Default LLM | Groq (open-weight Llama, fast, free tier) | Best free quality/speed; open-weight matches OSS goal |
+| Summarizer | Pluggable: `extractive` / `ollama` / `none` | **No external APIs, no keys** (hard requirement); `none` = extraction-only |
+| Default summarizer | `extractive` (pure-Python TextRank-style) | Zero setup, instant, free, runs on Railway. `ollama` opt-in for abstractive quality |
 | Interface | CLI: REPL + one-shot subcommands | Claude-Code-style flexibility |
 | Processing | Async job queue | Long jobs (YouTube/transcription) survive without timeout |
 | Deploy | CLI primary + optional `serve` mode → Docker → Railway | CLI is the product; serve is a bonus |
 | Stack | Python + Typer + Rich | markitdown/yt-dlp/praw are Python; Typer+Rich for CLI/REPL |
 | Architecture | Layered pipeline + handler registry (Approach A) | Clean per-source isolation, shared enrichment, grows into plugins |
 
-### Railway / free-tier strategy
-The shipped container is **lightweight** (extraction only). LLM summarization is
-delegated to a **free-tier hosted LLM API** (open-weight models via Groq, etc.)
-configured by the user's own free API key (env var). This keeps Railway within
-free/hobby limits and yields higher quality than a tiny self-hosted model. Ollama
-remains supported for users who run it on their own hardware (`LLM_PROVIDER=ollama`,
-`OLLAMA_URL`).
+### Free / no-API strategy
+**No external APIs, no keys — ever.** Summarization is done two ways:
+- `extractive` (default): pure-Python frequency/TextRank-style. No model, no network, no
+  deps. Instant and lightweight → runs fine on Railway free/hobby. Lower quality than an
+  LLM (extracts key sentences rather than writing new ones), but always works everywhere.
+- `ollama` (optional): a local model via `OLLAMA_URL` (default `http://localhost:11434`)
+  for abstractive, LLM-quality summaries. Requires the user to run Ollama; not used on
+  Railway. If unreachable, conversion falls back to extraction-only.
+
+`none` disables summarization entirely (pure extraction).
 
 ## 3. Architecture (Approach A: layered pipeline + handler registry)
 
@@ -70,9 +73,11 @@ any2md/
 │   ├── github.py     # README + repo metadata
 │   └── web.py        # readability article extraction (catch-all fallback)
 ├── enrich/
-│   ├── base.py       # LLMProvider ABC
-│   ├── groq.py / gemini.py / cloudflare.py / ollama.py
-│   └── enricher.py   # summary + tags + [[wikilinks]] from Document
+│   ├── base.py       # Summarizer ABC: summarize(title, body) -> {summary, tags, wikilinks}
+│   ├── extractive.py # pure-Python default (no model/network)
+│   ├── ollama.py     # optional local model (httpx → OLLAMA_URL)
+│   ├── providers.py  # get_summarizer(name): none | extractive | ollama
+│   └── enricher.py   # summary + tags + [[wikilinks]] onto Document (best-effort)
 ├── render.py         # Document -> Obsidian markdown string
 ├── writer.py         # slugify, collision-suffix, write to output folder
 └── server.py         # optional FastAPI `serve` mode (reuses pipeline+queue)
@@ -120,30 +125,30 @@ any URL no specialized handler claims.
 
 | Handler | Tool / source | Notes |
 |---|---|---|
-| `files` | `markitdown` (MS, MIT) | One lib: pdf/docx/pptx/xlsx/img-OCR/html/epub/csv. Image vision description added in enrich step if LLM is vision-capable. |
+| `files` | `markitdown` (MS, MIT) | One lib: pdf/docx/pptx/xlsx/html/epub/csv. NOTE: markitdown does not OCR images offline (returns empty), so image text/vision is deferred to a later pass. |
 | `youtube` | `yt-dlp` | Metadata + existing captions (free, fast). Whisper only as fallback when no captions exist — **off by default** (`whisper_fallback`) to stay Railway-light. |
 | `reddit` | public `.json` endpoint | No API key. Post + top 20 comments by score, nested. |
 | `github` | public REST (unauthenticated) | README + stars/topics/license/languages/dates. 60 req/hr unauth is plenty. |
 | `web` | `trafilatura` / readability-lxml | Clean article extraction. Catch-all for unmatched URLs. |
 
-## 5. LLM enrichment
+## 5. Enrichment (summary / tags / wikilinks) — no APIs, no keys
 
 ```python
-class LLMProvider(ABC):
+class Summarizer(ABC):
     @abstractmethod
-    def complete(self, prompt: str, *, system: str = "") -> str: ...
-    def describe_image(self, path: str) -> str | None: ...  # optional, vision models
+    def summarize(self, title: str, body: str) -> dict:  # {summary, tags, wikilinks}
+        ...
 ```
 
-- `LLM_PROVIDER=groq|gemini|cloudflare|ollama|none`. Each provider reads its own
-  key env var (`GROQ_API_KEY`, etc.).
-- `none` = extraction-only mode: transcripts/OCR/metadata still produced, no
-  summary/tags/wikilinks. **App never hard-fails on a missing key.**
-- `enricher.enrich(doc)` produces, in one or few calls:
-  - **summary** — concise summary of `body_markdown` (always).
-  - **tags** — 3–8 topical `#tags`.
-  - **wikilinks** — key entities/concepts wrapped as `[[...]]` for graph connectivity.
-  - Long inputs chunked, or sent whole on large-context providers (Gemini 1M).
+- `provider = extractive | ollama | none` (config key `provider`, env `ANY2MD_PROVIDER`).
+- **`extractive`** (default): pure-Python, no model/network. Frequency-scored sentences →
+  summary; frequent content words → tags; capitalized phrases → `[[wikilinks]]`.
+- **`ollama`**: posts a JSON-format prompt to a local Ollama server (`OLLAMA_URL`,
+  `OLLAMA_MODEL`); parses `{summary, tags, wikilinks}`. No key. Unreachable → falls back.
+- **`none`**: extraction-only; no summary/tags/wikilinks.
+- `enricher.enrich(doc, summarizer)` is **best-effort**: `None` summarizer or any error
+  leaves the Document unchanged, so conversion never fails over enrichment.
+- Long inputs are truncated to a generous cap (12k chars). Map-reduce chunking is future work.
 
 ## 6. CLI
 
@@ -152,7 +157,7 @@ class LLMProvider(ABC):
 any2md convert <url|file> [-o FOLDER]
 any2md convert --batch links.txt [-o FOLDER]
 any2md config set output ~/ObsidianVault/inbox
-any2md config set provider groq
+any2md config set provider ollama        # or: extractive (default) | none
 any2md serve [--port 8000]
 ```
 
@@ -161,7 +166,7 @@ any2md serve [--port 8000]
 > https://youtube.com/watch?v=...     # paste link → converts
 > ./report.pdf                         # path → converts
 /output ~/vault/inbox                  # change output folder
-/provider gemini                       # switch LLM
+/provider ollama                       # switch summarizer (extractive|ollama|none)
 /batch links.txt                       # bulk
 /jobs                                  # show running/queued jobs
 /last                                  # reopen last output path
@@ -174,12 +179,11 @@ Rich shows live per-job progress (extract → enrich → write).
 `~/.any2md/config.toml`:
 ```toml
 output_dir = "~/ObsidianVault/inbox"
-provider   = "groq"
+provider   = "extractive"       # extractive (default) | ollama | none
 whisper_fallback = false        # youtube w/o captions
-[providers.groq]
-model = "llama-3.3-70b-versatile"
 ```
-API keys come from **env vars only** (never written to the config file).
+No secrets are ever written to the config file (there are no API keys). Ollama settings
+come from env: `OLLAMA_URL`, `OLLAMA_MODEL`.
 Precedence: CLI flag > env var > `config.toml` > built-in default.
 
 ## 8. Async queue
