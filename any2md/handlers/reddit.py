@@ -153,6 +153,8 @@ def _extract_rss(target: str, xml: str) -> Document:
 
 
 class RedditHandler(Handler):
+    source_type = "reddit"
+
     def matches(self, target: str) -> bool:
         return bool(_REDDIT_RE.search(target))
 

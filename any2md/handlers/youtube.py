@@ -1,6 +1,7 @@
 """YouTube handler — yt-dlp extracts metadata + captions."""
 
 import re
+import shutil
 from datetime import date
 
 import httpx
@@ -59,6 +60,8 @@ def _get_captions(info: dict) -> str:
 
 
 class YouTubeHandler(Handler):
+    source_type = "youtube"
+
     def matches(self, target: str) -> bool:
         return bool(_YT_RE.search(target))
 
@@ -80,6 +83,12 @@ class YouTubeHandler(Handler):
         captions = _get_captions(info)
         body_markdown = captions or description or ""
 
+        # No captions → Whisper audio transcription would be the fallback, but that needs ffmpeg
+        # (which pipx can't install). Warn rather than silently leaving only the description.
+        warnings: list[str] = []
+        if not captions and shutil.which("ffmpeg") is None:
+            warnings.append("no captions found; install ffmpeg for audio transcription")
+
         return Document(
             title=title,
             source_url=target,
@@ -87,6 +96,7 @@ class YouTubeHandler(Handler):
             upload_date=upload_date,
             extraction_date=date.today().isoformat(),
             body_markdown=body_markdown,
+            warnings=warnings,
             metadata={
                 k: v
                 for k, v in {

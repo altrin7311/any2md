@@ -64,12 +64,18 @@ def _frontmatter(doc: Document) -> str:
 
 def render(doc: Document) -> str:
     blocks = [f"# {doc.title}"]
-    if doc.summary:
-        blocks.append(f"> **Summary:** {doc.summary}")
-    if doc.wikilinks:
-        links = ", ".join(f"[[{w}]]" for w in doc.wikilinks)
-        blocks.append(f"Key concepts: {links}")
-    section = _SECTION.get(doc.source_type, "Content")
-    blocks.append(f"## {section}\n\n{doc.body_markdown}")
+    # Distilled note: TL;DR callout + Key Points bullets (links already inlined by the enricher).
+    if doc.summary or doc.key_points:
+        if doc.summary:
+            blocks.append(f"> [!summary] TL;DR\n> {doc.summary}")
+        if doc.key_points:
+            bullets = "\n".join(f"- {point}" for point in doc.key_points)
+            blocks.append(f"## Key Points\n\n{bullets}")
+    # Passthrough: provider=none, or structured/empty sources with nothing to distill → raw body.
+    elif doc.body_markdown.lstrip().startswith("## "):
+        blocks.append(doc.body_markdown)
+    else:
+        section = _SECTION.get(doc.source_type, "Content")
+        blocks.append(f"## {section}\n\n{doc.body_markdown}")
     body = "\n\n".join(blocks)
     return _frontmatter(doc) + "\n" + body + "\n"

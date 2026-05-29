@@ -34,6 +34,8 @@ def _fetch_tweet(tweet_id: str) -> dict:
 
 
 class TwitterHandler(Handler):
+    source_type = "twitter"
+
     def matches(self, target: str) -> bool:
         return bool(_TWEET_RE.search(target))
 

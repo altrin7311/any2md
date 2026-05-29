@@ -65,3 +65,52 @@ def test_registry_routes_local_file_to_files_handler(tmp_path):
 def test_registry_raises_when_no_handler_matches():
     with pytest.raises(ValueError):
         registry.detect("ftp://example.com/file")  # ftp not handled by any handler
+
+
+class _FakeResult:
+    def __init__(self, title="", text=""):
+        self.title = title
+        self.text_content = text
+
+
+def test_image_without_tesseract_warns_and_degrades(tmp_path, monkeypatch):
+    img = tmp_path / "screenshot.png"
+    img.write_bytes(b"\x89PNG\r\n")  # not a real image; convert is mocked anyway
+    monkeypatch.setattr("any2md.handlers.files.shutil.which", lambda name: None)
+    h = FilesHandler()
+    monkeypatch.setattr(
+        h._md, "convert", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no ocr"))
+    )
+
+    doc = h.extract(str(img))  # must NOT raise
+
+    assert doc.source_type == "image"
+    assert doc.body_markdown == ""
+    assert any("tesseract" in w for w in doc.warnings)
+
+
+def test_image_with_tesseract_extracts_and_no_warning(tmp_path, monkeypatch):
+    img = tmp_path / "ocr.png"
+    img.write_bytes(b"\x89PNG\r\n")
+    monkeypatch.setattr("any2md.handlers.files.shutil.which", lambda name: "/usr/bin/tesseract")
+    h = FilesHandler()
+    monkeypatch.setattr(
+        h._md, "convert", lambda *a, **k: _FakeResult(title="", text="recognized text")
+    )
+
+    doc = h.extract(str(img))
+
+    assert doc.body_markdown == "recognized text"
+    assert not any("tesseract" in w for w in doc.warnings)
+
+
+def test_non_image_conversion_error_propagates(tmp_path, monkeypatch):
+    pdf = tmp_path / "broken.pdf"
+    pdf.write_bytes(b"%PDF-1.4 broken")
+    h = FilesHandler()
+    monkeypatch.setattr(
+        h._md, "convert", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("corrupt"))
+    )
+
+    with pytest.raises(RuntimeError):
+        h.extract(str(pdf))

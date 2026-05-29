@@ -92,37 +92,56 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 ## The Project
 
-### What it converts (MVP = Core 6)
+### What it converts (all built)
 - **Files** (one lib, `markitdown`): pdf, docx, pptx, xlsx, csv, images (OCR), html, epub.
-- **YouTube** (`yt-dlp`): metadata + captions, plus a summary. Whisper fallback off by default.
-- **Reddit**: post + top 20 comments by score, nested (public `.json`, no key).
+- **YouTube** (`yt-dlp`): metadata + **transcript** (captions, VTT cleaned) → summary.
+- **Reddit**: post + top comments. Public `.json` is now 403-blocked → falls back to the
+  keyless `.rss` Atom feed (see `.claude/rules/`).
 - **GitHub**: README + repo metadata (stars / topics / license / languages / dates).
-- **Web**: readability article extraction — the catch-all for any unmatched URL.
+- **Hacker News** (Firebase API): story + top comments.
+- **arXiv** (export API): title, authors, abstract, categories.
+- **Wikipedia** (REST summary API): article extract.
+- **Stack Overflow** (Stack Exchange API): question + top answers.
+- **Twitter/X** (keyless syndication CDN + derived token): single tweet, best-effort.
+- **Web**: readability article extraction — the catch-all for any unmatched URL (tried last).
 
-Later sources (Twitter/X, HN, Stack Overflow, Wikipedia, arXiv, podcasts…) are just new
-`Handler`s — the architecture already accounts for them. Don't build them in the MVP.
+All sources are keyless. Adding more is just another `Handler` (skill `add-source-handler`).
 
 ### Architecture — Approach A: layered pipeline + handler registry
 ```
 input → registry.detect() → handler.extract() → Document
-      → enricher.enrich()  (summary / tags / wikilinks; skipped if no LLM)
+      → enricher.enrich()  (summary / tags / wikilinks; skipped if provider=none)
       → render() → writer.write()        # flat, slugified .md in the output folder
 ```
-- Each source = a small `Handler` (`matches` + `extract` → `Document`). Extraction only —
-  no LLM calls, no file writing inside a handler.
-- LLM sits behind an `LLMProvider` ABC, selected by config/env.
-- One async `queue` is shared by the CLI REPL and the optional `serve` mode — one engine,
-  two front-ends. Module map + exact contracts live in `.claude/rules/`.
+- Each source = a small `Handler` (`matches` + `extract` → `Document`, plus a `source_type`
+  class attr used for ETA). Extraction only — no summarizing, no file writing in a handler.
+- Summarizer sits behind a `Summarizer` ABC (`extractive` / `ollama` / `none`), selected by
+  config/env. No LLM APIs — extractive is pure-Python; ollama is local.
+- One async `queue` (`queue.py`) is shared by the CLI REPL and `serve` — one engine, two
+  front-ends. Module map + exact contracts live in `.claude/rules/`.
+- **Module map:** `registry.py` (routing) · `handlers/*` (sources) · `enrich/*` (summarizers
+  + `enricher`) · `render.py` · `writer.py` (slug + `rename_output`) · `queue.py` · `repl.py`
+  (interactive front-end) · `server.py` (HTTP) · `theme.py` (cyan→purple banner, command
+  palette, tip pools) · `eta.py` (per-source estimate that learns) · `onboarding.py` (first run)
+  · `config.py` (`~/.any2md/config.toml`, `is_first_run`).
 
 ### Interface
-CLI, Claude-Code-style: an interactive **REPL** (`any2md` → paste links/paths, slash-commands
-like `/output`, `/provider`, `/jobs`) **and** scriptable **one-shot** (`any2md convert <x> -o dir`).
-Optional `any2md serve` exposes the same pipeline over HTTP for Docker / Railway.
+Installed via `pipx install any2md`; run `any2md`. Claude-Code-style:
+- **First run** asks one thing — the output dir — then auto-detects Ollama (else extractive).
+  Nothing else required from the user.
+- Interactive **REPL** (`any2md`): paste/drag a link or path; themed cyan→purple banner;
+  live spinner with a learned ETA + faded rotating tips during conversion; occasional
+  mid-session tips. Slash-commands: `/output`, `/provider`, `/batch`, `/jobs`, `/last`,
+  `/rename <name>` (rename the file just made), `/help`, `/quit`.
+- Scriptable **one-shot**: `any2md convert <x> -o dir` (and `--batch FILE`).
+- `any2md serve` exposes the same pipeline over HTTP for Docker / Railway.
 
 ### Tech stack
-Python 3.11+ • Typer + Rich (CLI/REPL) • markitdown • yt-dlp • trafilatura • httpx •
-FastAPI (serve) • pytest + ruff. Pluggable summarizer: **`extractive`** (default, pure-Python
-TextRank-style, zero setup) / **`ollama`** (local model, no key) / **`none`** (extraction only).
+Python 3.11+ • Typer + Rich (CLI/REPL/theme) • markitdown • yt-dlp • trafilatura • httpx
+(reddit/github/hn/arxiv/wikipedia/stackoverflow/twitter, all keyless) • FastAPI + uvicorn
+(serve) • pytest + ruff. Distribution: pipx/PyPI (`pyproject.toml`, MIT `LICENSE`). Pluggable
+summarizer: **`extractive`** (default, pure-Python TextRank-style, zero setup) / **`ollama`**
+(local model, no key, auto-detected) / **`none`** (extraction only).
 **No external APIs, no keys, ever.** Pins: `.claude/rules/tech-stack.md`.
 
 ### Hard Constraints (do not violate)
@@ -142,3 +161,5 @@ TextRank-style, zero setup) / **`ollama`** (local model, no key) / **`none`** (e
 - `/new-handler <source>` — scaffold a new `Handler` + fixture test (TDD), via the `handler-builder` agent.
 - `/checks` — run the test + lint suite (`ruff` + `pytest`).
 
+## Applied Learning
+When something fails repeatedly or a workaround is found, add a one-line bullet. Keep each under 15 words. No explanations. Only things that save time in future sessions.

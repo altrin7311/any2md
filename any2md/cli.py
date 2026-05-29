@@ -13,6 +13,16 @@ config_app = typer.Typer(help="Read and write Any2MD configuration.")
 app.add_typer(config_app, name="config")
 
 
+def _warn_collector(sink: list):
+    """An on_event callback that siphons 'warn:'-prefixed pipeline events into `sink`."""
+
+    def on_event(stage: str) -> None:
+        if stage.startswith("warn:"):
+            sink.append(stage[len("warn:") :])
+
+    return on_event
+
+
 def _version_callback(value: bool) -> None:
     if value:
         typer.echo(__version__)
@@ -49,6 +59,10 @@ def convert(
     target: str = typer.Argument(None, help="File path or URL to convert."),
     output: str = typer.Option(None, "-o", "--output", help="Output folder."),
     batch: str = typer.Option(None, "--batch", help="File of targets, one per line."),
+    depth: str = typer.Option(None, "--depth", help="Summary depth: low|medium|high."),
+    provider: str = typer.Option(
+        None, "--provider", help="Summarizer: extractive|ollama|none (overrides config)."
+    ),
 ) -> None:
     """Convert a file or URL to Markdown."""
     from pathlib import Path
@@ -64,18 +78,35 @@ def convert(
         raise typer.Exit(1)
 
     out = output or config.get("output_dir")
-    provider = config.get("provider")
+    provider = provider or config.get("provider")
 
     from rich.console import Console
 
     from any2md.theme import gradient_text
 
     console = Console()
+    failures = 0
     for item in targets:
-        path = pipeline.convert(item, out, provider)
+        warnings: list[str] = []
+        try:
+            path = pipeline.convert(
+                item, out, provider, depth=depth, on_event=_warn_collector(warnings)
+            )
+        except Exception as exc:  # a flaky source must not crash the CLI (mirrors the queue)
+            console.print(f"✗ {item}: {exc}", style="red")
+            failures += 1
+            continue
+        if path is None:  # nothing written (empty / paywalled source) — surface why, not a ✓
+            for warning in warnings:
+                console.print(f"  ⚠ {warning}", style="#F59E0B")
+            continue
         line = gradient_text("✓ wrote ", bold=True)
         line.append(str(path), style="dim")
         console.print(line)
+        for warning in warnings:
+            console.print(f"  ⚠ {warning}", style="#F59E0B")
+    if failures:
+        raise typer.Exit(1)
 
 
 @app.command()

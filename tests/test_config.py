@@ -41,7 +41,7 @@ def test_whisper_fallback_from_env_coerces_bool(tmp_config, monkeypatch):
 
 
 def test_effective_returns_all_known_keys(tmp_config):
-    assert set(config.effective()) == {"output_dir", "provider", "whisper_fallback"}
+    assert set(config.effective()) == {"output_dir", "provider", "whisper_fallback", "depth"}
 
 
 def test_api_keys_never_written_to_disk(tmp_config, monkeypatch):

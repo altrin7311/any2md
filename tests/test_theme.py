@@ -40,3 +40,25 @@ def test_clean_dropped_path_leaves_urls_untouched():
 
 def test_clean_dropped_path_leaves_plain_path():
     assert _clean_dropped_path("/tmp/note.txt") == "/tmp/note.txt"
+
+
+def test_depth_hint_text():
+    from any2md.theme import depth_hint
+
+    assert depth_hint("low", 10) == "~10% of source · ~10 lines"
+    assert depth_hint("medium", 40) == "~30% of source · ~40 lines"
+    assert depth_hint("high", 80) == "~50% of source · ~80 lines"
+    assert depth_hint("raw", 0) == "full source · no summarization"
+
+
+def test_print_welcome_nudges_help():
+    import io
+
+    from rich.console import Console
+
+    from any2md.theme import print_welcome
+
+    console = Console(file=io.StringIO(), width=100)
+    # _tip_idx=0 ensures the /help tip is shown (deterministic in tests)
+    print_welcome(console, _tip_idx=0)
+    assert "/help" in console.file.getvalue()

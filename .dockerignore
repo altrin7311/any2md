@@ -1,0 +1,23 @@
+# Keep the image small + correct — never ship the local (macOS) venv or git history.
+.venv
+.git
+.github
+.gitignore
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+*.egg-info
+dist
+build
+.DS_Store
+
+# Not needed at runtime (serve mode only needs the package + pyproject + README).
+tests
+docs
+prompts
+summaries
+output
+.claude
+Dockerfile
+railway.toml

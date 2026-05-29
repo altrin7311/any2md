@@ -22,6 +22,8 @@ def _fetch_atom(arxiv_id: str) -> str:
 
 
 class ArxivHandler(Handler):
+    source_type = "arxiv"
+
     def matches(self, target: str) -> bool:
         return bool(_ARXIV_RE.search(target))
 

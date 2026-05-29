@@ -1,5 +1,6 @@
 """Local-file handler: wraps markitdown to convert pdf/docx/pptx/xlsx/csv/html/... to Markdown."""
 
+import shutil
 from datetime import date
 from pathlib import Path
 
@@ -32,6 +33,8 @@ _SOURCE_TYPE = {
 
 
 class FilesHandler(Handler):
+    source_type = "file"
+
     def __init__(self) -> None:
         self._md = MarkItDown()
 
@@ -42,13 +45,33 @@ class FilesHandler(Handler):
 
     def extract(self, target: str) -> Document:
         path = Path(target)
-        result = self._md.convert(target)
+        source_type = _SOURCE_TYPE[path.suffix.lower()]
+        warnings: list[str] = []
+
+        if source_type == "image":
+            # Image OCR needs the tesseract binary, which pipx can't install. Warn instead of
+            # letting a markitdown traceback escape, and degrade to an empty body on failure.
+            if shutil.which("tesseract") is None:
+                warnings.append("install tesseract for image OCR: brew install tesseract")
+            try:
+                result = self._md.convert(target)
+                title = result.title or path.stem
+                body = result.text_content or ""
+            except Exception:
+                title = path.stem
+                body = ""
+        else:
+            result = self._md.convert(target)  # genuine failures here surface as a real error
+            title = result.title or path.stem
+            body = result.text_content or ""
+
         return Document(
-            title=result.title or path.stem,
+            title=title,
             source_url=None,
-            source_type=_SOURCE_TYPE[path.suffix.lower()],
+            source_type=source_type,
             upload_date=None,
             extraction_date=date.today().isoformat(),
-            body_markdown=result.text_content or "",
+            body_markdown=body,
             metadata={},
+            warnings=warnings,
         )

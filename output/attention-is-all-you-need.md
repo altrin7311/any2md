@@ -1,19 +1,15 @@
 ---
 title: "Attention Is All You Need"
-source_url: "https://arxiv.org/abs/1706.03762"
+source_url: "https://arxiv.org/pdf/1706.03762"
 source_type: arxiv
 upload_date: 2017-06-12
-extraction_date: 2026-05-29
+extraction_date: 2026-05-30
 authors: [Ashish Vaswani, Noam Shazeer, Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N. Gomez, Lukasz Kaiser, Illia Polosukhin]
 categories: [cs.CL, cs.LG]
-tags: [Transformer, attention mechanisms, machine learning, natural language processing]
+tags: []
 ---
 
 # Attention Is All You Need
-
-> **Summary:** The Transformer architecture, based solely on attention mechanisms, surpasses traditional sequence transduction models in quality while being more parallelizable and requiring less training time.
-
-Key concepts: [[WMT 2014 English-to-German translation task]], [[WMT 2014 English-to-French translation task]], [[English constituency parsing]]
 
 ## Abstract
 

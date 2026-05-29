@@ -17,8 +17,10 @@ You build exactly ONE Any2MD source handler, TDD-first, then report back compres
 1. Record/obtain a fixture for the target source under `tests/fixtures/` (one small sample).
 2. Write `tests/test_<source>.py` asserting `extract()` returns the expected `Document`
    fields (title, source_type, dates, body, key metadata). Run it — confirm it FAILS.
-3. Implement `any2md/handlers/<source>.py`: `matches()` (cheap, side-effect free) and
-   `extract()` (returns a `Document`; no LLM, no file writing).
+3. Implement `any2md/handlers/<source>.py`: a `source_type` class attr, `matches()` (cheap,
+   side-effect free), and `extract()` (returns a `Document`; no summarizing, no file writing).
+   Put network behind module-level `_fetch_*` helpers so the test mocks them; if the endpoint
+   can be blocked, catch `httpx.HTTPError` and fall back to a keyless route (cf. `reddit.py`).
 4. Register it in `registry.py` in correct priority order (`web` stays last).
 5. Run `pytest tests/test_<source>.py -q` until green. Then `ruff check --fix` + `ruff format`.
 

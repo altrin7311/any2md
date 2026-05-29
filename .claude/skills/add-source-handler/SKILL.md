@@ -21,11 +21,16 @@ input (URL or file) into a `Document`. Follow this recipe exactly.
    assert the `Document` fields (title, source_type, dates, body_markdown, key metadata).
    Run it — confirm it FAILS for the right reason.
 3. **Implement.** Create `any2md/handlers/<source>.py`:
+   - `source_type` class attr (e.g. `"arxiv"`) — `eta.py` reads it before `extract()`.
    - `matches(target)` — cheap, side-effect-free (URL regex or file extension).
+   - Put network behind module-level `_fetch_*` helpers (so step 2's test mocks them).
+     If the primary endpoint can be blocked, catch `httpx.HTTPError` and fall back to a
+     keyless alternative (see `reddit.py`: `.json` → `.rss`).
    - `extract(target)` — fetch/parse the fixture-shaped input, return a `Document`.
-     No LLM calls, no file writing — extraction only.
+     No summarizing, no file writing — extraction only.
 4. **Register.** Add the handler to `registry.py` in priority order. Specialized URL
-   handlers go BEFORE the `web` catch-all; `web` is always last.
+   handlers go BEFORE the `web` catch-all; `web` is always last. (Already built: youtube,
+   reddit, github, hackernews, arxiv, wikipedia, stackoverflow, twitter, files, web.)
 5. **Green + clean.** `pytest tests/test_<source>.py -q` until green, then `ruff check --fix`
    and `ruff format`.
 6. **E2E.** Add one `tests/test_e2e_<source>.py` running the full pipeline (external calls

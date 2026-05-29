@@ -24,6 +24,29 @@ def _client(tmp_path, token=None):
     return TestClient(app)
 
 
+def test_root_shows_service_info(tmp_path):
+    with _client(tmp_path) as client:
+        resp = client.get("/")
+        assert resp.status_code == 200
+        body = resp.json()
+        assert body["service"] == "any2md"
+        assert "/convert" in str(body.get("endpoints"))
+
+
+def test_health_ok(tmp_path):
+    with _client(tmp_path) as client:
+        resp = client.get("/health")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "ok"
+
+
+def test_root_and_health_open_even_with_token(tmp_path):
+    # landing + healthcheck must not require auth (browser visit, Railway healthcheck)
+    with _client(tmp_path, token="secret") as client:
+        assert client.get("/").status_code == 200
+        assert client.get("/health").status_code == 200
+
+
 def test_convert_returns_job_id(tmp_path):
     with _client(tmp_path) as client:
         resp = client.post("/convert", json={"target": "https://example.com/x"})

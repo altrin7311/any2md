@@ -10,11 +10,10 @@ tags: [ai, tutorial, systems]
 
 # How to Build X
 
-> **Summary:** A concise summary.
+> [!summary] TL;DR
+> A concise note on [[Embeddings]] and retrieval.
 
-Key concepts: [[Embeddings]], [[Vector Search]]
+## Key Points
 
-## Transcript
-
-Line one.
-Line two.
+- [[Vector Search]] scales to billions of vectors.
+- Indexes speed lookups.

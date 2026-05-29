@@ -78,7 +78,8 @@ def test_e2e_reddit(tmp_path):
     path, text = _read(out)
     assert "source_type: reddit" in text
     assert 'subreddit: "MachineLearning"' in text
-    assert "commenter_one" in text  # top comment carried into body
+    assert "## Key Points" in text  # distilled into a knowledge note, not a raw dump
+    assert "[[" in text  # concepts inlined as wikilinks (graph forms)
 
 
 # --- GitHub ------------------------------------------------------------------
@@ -137,5 +138,7 @@ def test_e2e_provider_none_no_summary(tmp_path):
     convert(str(src), out, provider="none")
 
     _, text = _read(out)
-    assert "> **Summary:**" not in text
+    assert "> [!summary]" not in text  # none = no distillation
+    assert "## Key Points" not in text
     assert "source_type: csv" in text
+    assert "| a | b |" in text  # raw extraction passes through

@@ -40,6 +40,8 @@ def _fetch_languages(owner: str, repo: str) -> list[str]:
 
 
 class GitHubHandler(Handler):
+    source_type = "github"
+
     def matches(self, target: str) -> bool:
         return bool(_GITHUB_RE.search(target))
 

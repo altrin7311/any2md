@@ -37,6 +37,8 @@ def _strip_html(html: str) -> str:
 
 
 class StackOverflowHandler(Handler):
+    source_type = "stackoverflow"
+
     def matches(self, target: str) -> bool:
         return bool(_SO_RE.search(target))
 

@@ -10,7 +10,7 @@ from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
-from any2md import config
+from any2md import __version__, config
 from any2md.queue import JobQueue
 
 
@@ -24,9 +24,28 @@ def create_app(
     token: str | None = None,
     output_dir: str | None = None,
 ) -> FastAPI:
-    app = FastAPI(title="Any2MD")
+    app = FastAPI(title="Any2MD", version=__version__)
     q = queue or JobQueue()
     out_dir = output_dir or str(config.get("output_dir"))
+
+    @app.get("/")
+    async def root() -> dict:
+        """Landing info so a browser visit to the root isn't a bare 404."""
+        return {
+            "service": "any2md",
+            "version": __version__,
+            "docs": "/docs",
+            "endpoints": {
+                "POST /convert": "{target, provider?} → {id}",
+                "GET /jobs/{id}": "status + progress",
+                "GET /jobs/{id}/download": "the rendered .md",
+                "GET /health": "liveness check",
+            },
+        }
+
+    @app.get("/health")
+    async def health() -> dict:
+        return {"status": "ok"}
 
     def _required_token() -> str | None:
         return token if token is not None else os.environ.get("ANY2MD_TOKEN")

@@ -21,6 +21,8 @@ def _fetch_summary(lang: str, title: str) -> dict:
 
 
 class WikipediaHandler(Handler):
+    source_type = "wikipedia"
+
     def matches(self, target: str) -> bool:
         return bool(_WIKI_RE.search(target))
 

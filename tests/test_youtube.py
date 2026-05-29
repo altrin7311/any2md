@@ -87,3 +87,28 @@ def test_parse_vtt_dedups_rolling_lines():
     assert out.count("hi everyone so by now you have") == 1
     assert "chat GPT" in out
     assert "taken the world by storm" in out
+
+
+def test_youtube_no_captions_without_ffmpeg_warns(monkeypatch):
+    monkeypatch.setattr("any2md.handlers.youtube.shutil.which", lambda name: None)
+    with patch("any2md.handlers.youtube._ydl_extract", return_value=_FAKE_INFO):
+        doc = YouTubeHandler().extract("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    assert any("ffmpeg" in w for w in doc.warnings)
+
+
+def test_youtube_no_captions_with_ffmpeg_no_warning(monkeypatch):
+    monkeypatch.setattr("any2md.handlers.youtube.shutil.which", lambda name: "/usr/bin/ffmpeg")
+    with patch("any2md.handlers.youtube._ydl_extract", return_value=_FAKE_INFO):
+        doc = YouTubeHandler().extract("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    assert not any("ffmpeg" in w for w in doc.warnings)
+
+
+def test_youtube_with_captions_no_ffmpeg_warning_even_without_ffmpeg(monkeypatch):
+    monkeypatch.setattr("any2md.handlers.youtube.shutil.which", lambda name: None)
+    with (
+        patch("any2md.handlers.youtube._ydl_extract", return_value=_FAKE_INFO),
+        patch("any2md.handlers.youtube._get_captions", return_value="real transcript"),
+    ):
+        doc = YouTubeHandler().extract("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    assert doc.body_markdown == "real transcript"
+    assert not any("ffmpeg" in w for w in doc.warnings)

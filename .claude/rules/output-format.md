@@ -13,28 +13,42 @@ Target vault: Karpathy-style Obsidian knowledge graph. One `.md` per converted s
 ---
 title: "<title>"
 source_url: "<url or omitted for local files>"
-source_type: youtube        # youtube|reddit|github|web|pdf|docx|...
+source_type: youtube        # youtube|reddit|github|hackernews|arxiv|wikipedia|stackoverflow|twitter|web|pdf|docx|...
 extraction_date: 2026-05-28  # ISO date, always present
 upload_date: 2026-05-01      # ISO date or omitted if source has none
-tags: [ai, tutorial]         # from enricher; [] if no LLM
+tags: [ai, tutorial]         # from enricher; [] if no summarizer
 ---
 ```
-- Type-specific metadata gets lifted into frontmatter when present, e.g. `channel`,
-  `stars`, `subreddit`, `author`, `license`, `languages`.
+- Type-specific metadata is lifted into frontmatter when present, in this order:
+  `channel`, `stars`, `subreddit`, `author`, `handle`, `license`, `languages`, `authors`,
+  `categories`, `score`, `comments`, `likes`, `lang`. (`tags` is reserved for the enricher line —
+  never lift a metadata key named `tags`.)
 - Omit a key entirely rather than writing `null`.
 
-## Body layout
+## Body layout — distilled knowledge note
+The note **is** the summary: the distilled signal (the important ~N% of the source), not the
+raw body. The summary REPLACES the body — it does not augment it. One unified layout for every
+source (no per-source section headings):
 ```markdown
 # <title>
 
-> **Summary:** <one concise summary>      # omitted when provider=none
+> [!summary] TL;DR
+> <mini multi-sentence summary, with [[wikilinks]] inlined>
 
-Key concepts: [[Entity A]], [[Entity B]]   # wikilinks; omitted when none
-
-## <Transcript | Content | Comments | README>
-<extracted body_markdown>
+## Key Points
+- <high-signal point, [[wikilinks]] inlined>
+- <…this list is the kept ~N% of the source>
 ```
-- `#tags` live in frontmatter; `[[wikilinks]]` live inline in the body (Obsidian links).
-- Keep the original extracted content intact below the summary — summary augments, never replaces.
+- `#tags` live in frontmatter; `[[wikilinks]]` are **inlined** into the TL;DR + Key Points (first
+  whole-word occurrence of each concept) — there is no separate "Concepts" section.
+- **Depth** controls N via the `depth` config (low 10% · medium 20% · high 35% of the source),
+  set with the REPL `/depth` picker, `--depth`, or `ANY2MD_DEPTH`. See `depth.py`.
+
+## Passthrough (no distillation)
+When there is nothing to distill — `provider=none`, or structured/empty sources (csv, xlsx,
+json, xml, or near-empty prose) — the raw `body_markdown` passes through under a section heading
+instead (youtube→Transcript, github→README, reddit→Thread, hackernews→Discussion,
+stackoverflow→Question, arxiv→Abstract, wikipedia→Article, twitter→Tweet; default `Content`).
+**If `body_markdown` already opens with its own `## ` heading, `render()` omits the auto heading.**
 
 `render()` is golden-file tested: a fixed `Document` must produce byte-exact expected `.md`.

@@ -15,6 +15,7 @@ DEFAULTS: dict[str, object] = {
     "output_dir": "~/Any2MD-out",
     "provider": "extractive",  # free, zero-setup summaries; "ollama" or "none" also valid
     "whisper_fallback": False,
+    "depth": "medium",  # summary depth: low|medium|high — fraction of source kept (see depth.py)
 }
 
 # User-facing aliases → canonical config key.
@@ -25,6 +26,11 @@ _BOOL_KEYS = {"whisper_fallback"}
 
 def config_path() -> Path:
     return Path(os.environ.get("ANY2MD_CONFIG", "~/.any2md/config.toml")).expanduser()
+
+
+def is_first_run() -> bool:
+    """No config file yet → this is the user's first launch (trigger onboarding)."""
+    return not config_path().exists()
 
 
 def _canonical(key: str) -> str:

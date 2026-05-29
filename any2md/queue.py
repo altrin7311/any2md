@@ -13,6 +13,11 @@ from pathlib import Path
 # Stages a converter reports via its on_event callback, in order.
 STAGES = ("extracting", "enriching", "writing")
 
+# Convention: on_event strings prefixed "warn:" are user-facing diagnostics (missing OCR
+# binary, ollama down, empty page) rather than pipeline stages. They go to job.warnings, not
+# job.events/status. Riding on_event avoids changing the convert_fn signature its callers depend on.
+_WARN_PREFIX = "warn:"
+
 
 @dataclass
 class Job:
@@ -22,6 +27,7 @@ class Job:
     provider: str
     status: str = "queued"
     events: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
     result: Path | None = None
     error: str | None = None
     done: asyncio.Event = field(default_factory=asyncio.Event)
@@ -83,6 +89,9 @@ class JobQueue:
 
     async def _run(self, job: Job) -> None:
         def on_event(stage: str) -> None:
+            if stage.startswith(_WARN_PREFIX):
+                job.warnings.append(stage[len(_WARN_PREFIX) :])
+                return
             job.status = stage
             job.events.append(stage)
 
@@ -90,8 +99,9 @@ class JobQueue:
             job.result = await asyncio.to_thread(
                 self._convert, job.target, job.output_dir, job.provider, on_event
             )
-            job.status = "done"
-            job.events.append("done")
+            terminal = "done" if job.result is not None else "skipped"
+            job.status = terminal
+            job.events.append(terminal)
         except Exception as exc:  # one bad job must not kill the queue
             job.error = str(exc)
             job.status = "error"

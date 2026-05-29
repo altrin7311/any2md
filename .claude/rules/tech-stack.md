@@ -8,18 +8,30 @@ Python project. Prefer `uv` for env/deps; fall back to `pip` + venv.
 | CLI / REPL | `typer`, `rich` | Typer = commands; Rich = progress/output |
 | Files handler | `markitdown` | MS, MIT. Covers pdf/docx/pptx/xlsx/csv/img-OCR/html/epub |
 | YouTube | `yt-dlp` | metadata + captions; needs `ffmpeg` only for Whisper fallback |
-| Reddit | `httpx` | public `.json` endpoint, no API key |
+| Reddit | `httpx` | public `.json` (now 403-blocked) → `.rss` Atom fallback, no key |
 | GitHub | `httpx` | public REST, unauthenticated (60 req/hr) |
-| Web | `trafilatura` | readability article extraction |
+| Hacker News | `httpx` | Firebase API `hacker-news.firebaseio.com`, no key |
+| arXiv | `httpx` + stdlib XML | `export.arxiv.org/api/query` Atom (use https + follow_redirects) |
+| Wikipedia | `httpx` | REST `…/api/rest_v1/page/summary/<title>`, no key |
+| Stack Overflow | `httpx` | Stack Exchange API `api.stackexchange.com`, no key |
+| Twitter/X | `httpx` | keyless `cdn.syndication.twimg.com` + derived token; single tweet |
+| Web | `trafilatura` | readability article extraction (catch-all, tried last) |
 | Summarize (default) | stdlib only | `extractive` — pure-Python TextRank-style; no model, no network, no deps |
 | Summarize (optional) | `httpx` | `ollama` — local model at `OLLAMA_URL`; lazy httpx; no API key |
-| Serve | `fastapi`, `uvicorn` | optional; only for `serve` mode |
-| Config | stdlib `tomllib` + `tomli-w` | read/write `~/.any2md/config.toml` |
+| Serve | `fastapi`, `uvicorn` | optional (`[serve]` extra); only for `serve` mode |
+| CLI theme | `rich` | `theme.py` cyan→purple gradient banner, command palette, tip pools |
+| ETA | stdlib `json` | `eta.py` per-source estimate, learns into `~/.any2md/stats.json` |
+| Onboarding | — | `onboarding.py`: first run asks output dir, auto-detects Ollama |
+| Config | stdlib `tomllib` + `tomli-w` | read/write `~/.any2md/config.toml`; `is_first_run()` |
+
+## Distribution
+- Packaged for **pipx/PyPI**: `pyproject.toml` carries metadata + classifiers; MIT `LICENSE`.
+- Users: `pipx install any2md` then `any2md`. Maintainer release: `python -m build` + `twine upload`.
 
 ## Dev tooling
-- `pytest` — tests. `pytest-recording`/saved fixtures for handler tests (no live network).
+- `pytest` — tests. Saved fixtures for handler tests (no live network); mock `_fetch_*` helpers.
 - `ruff` — lint + format (the `.claude/hooks/ruff.sh` hook runs it on edited `.py`).
-- Target Python 3.11+ (`tomllib` is stdlib from 3.11).
+- `build` + `twine` — packaging/publish. Target Python 3.11+ (`tomllib` is stdlib from 3.11).
 
 ## System deps (for Docker / serve)
 - `ffmpeg` — yt-dlp Whisper fallback (only if enabled).
@@ -34,8 +46,10 @@ Python project. Prefer `uv` for env/deps; fall back to `pip` + venv.
 - `none`: extraction only, no summary.
 
 ## Env vars (no API keys exist)
-`OLLAMA_URL`, `OLLAMA_MODEL` (optional, for the ollama summarizer), `ANY2MD_TOKEN` (gates `serve`).
-Config keys also overridable via `ANY2MD_OUTPUT_DIR`, `ANY2MD_PROVIDER`, `ANY2MD_WHISPER_FALLBACK`.
+`OLLAMA_URL`, `OLLAMA_MODEL` (optional, for the ollama summarizer; also auto-detected on first
+run), `ANY2MD_TOKEN` (gates `serve`). Config keys also overridable via `ANY2MD_OUTPUT_DIR`,
+`ANY2MD_PROVIDER`, `ANY2MD_WHISPER_FALLBACK`. Test isolation: `ANY2MD_CONFIG` (config path),
+`ANY2MD_STATS` (ETA stats path).
 
 ## Config precedence
 CLI flag > env var > `~/.any2md/config.toml` > built-in default.

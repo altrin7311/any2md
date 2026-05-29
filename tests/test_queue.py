@@ -68,3 +68,40 @@ def test_queue_all_lists_every_job():
     _run(_drain(q))
 
     assert len(q.all()) == 2
+
+
+def _warning_convert(target, output_dir, provider, on_event):
+    on_event("extracting")
+    on_event("warn:ollama unreachable — used extractive instead")
+    on_event("writing")
+    return Path(output_dir) / f"{target}.md"
+
+
+def _skip_convert(target, output_dir, provider, on_event):
+    on_event("extracting")
+    on_event("warn:extraction failed — source may be empty, paywalled, or JS-only; nothing written")
+    return None  # nothing written
+
+
+def test_queue_marks_job_skipped_when_nothing_written():
+    q = JobQueue(convert_fn=_skip_convert, workers=1)
+    jid = q.submit("https://paywalled.example/x", "/tmp/out", "extractive")
+    _run(_drain(q))
+
+    job = q.get(jid)
+    assert job.status == "skipped"
+    assert job.result is None
+    assert any("nothing written" in w for w in job.warnings)
+    assert "done" not in job.events
+
+
+def test_queue_routes_warn_events_to_warnings_not_events():
+    q = JobQueue(convert_fn=_warning_convert, workers=1)
+    jid = q.submit("alpha", "/tmp/out", "extractive")
+    _run(_drain(q))
+
+    job = q.get(jid)
+    assert job.warnings == ["ollama unreachable — used extractive instead"]
+    assert "warn:ollama unreachable — used extractive instead" not in job.events
+    assert job.events == ["extracting", "writing", "done"]
+    assert job.status == "done"

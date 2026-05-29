@@ -28,6 +28,8 @@ def _strip_html(html: str) -> str:
 
 
 class HackerNewsHandler(Handler):
+    source_type = "hackernews"
+
     def matches(self, target: str) -> bool:
         return bool(_HN_RE.search(target))
 
