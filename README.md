@@ -14,7 +14,7 @@ Every input is summarized. **No external APIs, no API keys, ever.**
 One command, anywhere (recommended — isolated, no venv to manage):
 
 ```bash
-pipx install any2md
+pipx install any2md-cli
 ```
 
 Then just run it:
@@ -137,7 +137,7 @@ CI runs the suite + lint on every push and PR.
 
 ### Publish to PyPI (maintainer)
 
-`pipx install any2md` works once the package is on PyPI. To cut a release:
+`pipx install any2md-cli` works once the package is on PyPI. To cut a release:
 
 ```bash
 python -m build                 # builds dist/*.whl and dist/*.tar.gz

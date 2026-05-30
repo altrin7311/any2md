@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "any2md"
+name = "any2md-cli"
 dynamic = ["version"]
 description = "Convert almost anything to Obsidian-flavored Markdown for a knowledge graph."
 readme = "README.md"
