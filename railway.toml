@@ -10,6 +10,6 @@
 builder = "dockerfile"
 
 [deploy]
-startCommand = "any2md serve --host 0.0.0.0 --port $PORT"
+startCommand = "any2md serve --host 0.0.0.0"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3

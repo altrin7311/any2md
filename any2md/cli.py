@@ -111,7 +111,7 @@ def convert(
 
 @app.command()
 def serve(
-    port: int = typer.Option(8000, "--port", help="Port to serve on."),
+    port: int = typer.Option(None, "--port", help="Port to serve on."),
     host: str = typer.Option("0.0.0.0", "--host", help="Bind address."),
 ) -> None:
     """Run the HTTP server (for Docker/Railway)."""
@@ -119,7 +119,8 @@ def serve(
 
     from any2md.server import create_app
 
-    uvicorn.run(create_app(), host=host, port=port)
+    resolved_port = port if port is not None else int(os.environ.get("PORT", 8000))
+    uvicorn.run(create_app(), host=host, port=resolved_port)
 
 
 @config_app.command("set")
