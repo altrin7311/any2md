@@ -115,6 +115,8 @@ def serve(
     host: str = typer.Option("0.0.0.0", "--host", help="Bind address."),
 ) -> None:
     """Run the HTTP server (for Docker/Railway)."""
+    import os
+
     import uvicorn
 
     from any2md.server import create_app
