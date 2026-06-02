@@ -183,3 +183,23 @@ def test_convert_falls_back_to_config_depth(tmp_path, monkeypatch):
     monkeypatch.setattr(enricher, "get_summarizer", lambda name: _RatioRecorder(seen))
     convert("u", tmp_path, provider="extractive", on_event=lambda s: None)
     assert seen["ratio"] == 0.10
+
+
+def test_convert_skips_cleanly_on_source_unavailable(tmp_path, monkeypatch):
+    from any2md import pipeline, registry
+    from any2md.errors import SourceUnavailable
+
+    class _Boom:
+        def extract(self, target):
+            raise SourceUnavailable("could not download: 404")
+
+    monkeypatch.setattr(registry, "detect", lambda target: _Boom())
+    events = []
+    out = pipeline.convert(
+        "https://example.com/x.pdf",
+        str(tmp_path),
+        "none",
+        on_event=events.append,
+    )
+    assert out is None  # clean skip, no file written
+    assert any(e.startswith("warn:skipped:") for e in events)

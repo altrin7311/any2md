@@ -6,6 +6,7 @@ from pathlib import Path
 from any2md import config, eta, registry, writer
 from any2md.depth import ratio as depth_ratio
 from any2md.enrich.enricher import enrich_with_fallback
+from any2md.errors import SourceUnavailable
 from any2md.url import canonical_url
 
 # Bodies shorter than this (after stripping) likely mean a paywalled / JS-only / empty source.
@@ -36,7 +37,11 @@ def convert(
 
     handler = registry.detect(target)
     emit("extracting")
-    doc = handler.extract(target)
+    try:
+        doc = handler.extract(target)
+    except SourceUnavailable as exc:
+        emit("warn:skipped: " + str(exc))
+        return None
     if doc.source_url:  # clean tracking junk so the vault link is canonical + dedup works
         doc.source_url = canonical_url(doc.source_url)
     emit("enriching")
