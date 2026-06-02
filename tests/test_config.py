@@ -41,7 +41,19 @@ def test_whisper_fallback_from_env_coerces_bool(tmp_config, monkeypatch):
 
 
 def test_effective_returns_all_known_keys(tmp_config):
-    assert set(config.effective()) == {"output_dir", "provider", "whisper_fallback", "depth"}
+    assert set(config.effective()) == {
+        "output_dir",
+        "provider",
+        "whisper_fallback",
+        "depth",
+        "ollama_autopull",
+    }
+
+
+def test_ollama_autopull_key_is_known(tmp_config):
+    assert config.get("ollama_autopull") is None  # unset → "ask"
+    config.set_value("ollama_autopull", True)
+    assert config.get("ollama_autopull") is True
 
 
 def test_api_keys_never_written_to_disk(tmp_config, monkeypatch):
