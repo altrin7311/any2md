@@ -168,3 +168,24 @@ def test_no_args_launches_repl(tmp_config):
     result = runner.invoke(app, [], input="")
     assert result.exit_code == 0
     assert "Obsidian markdown" in result.stdout  # tagline from the themed welcome
+
+
+def test_convert_calls_ollama_ensure_ready_when_provider_ollama(tmp_path, monkeypatch):
+    import any2md.enrich.ollama as ollama
+    from any2md import pipeline
+
+    called = {}
+
+    def _fake_ready(interactive):
+        called["hit"] = True
+        return ("extractive", "note")
+
+    monkeypatch.setattr(ollama, "ensure_ready", _fake_ready)
+    monkeypatch.setattr(pipeline, "convert", lambda *a, **k: tmp_path / "x.md")
+    (tmp_path / "x.md").write_text("# x\n")
+
+    result = runner.invoke(
+        app, ["convert", "https://x.com/a", "-o", str(tmp_path), "--provider", "ollama"]
+    )
+    assert result.exit_code == 0
+    assert called.get("hit") is True  # autostart attempted before converting
