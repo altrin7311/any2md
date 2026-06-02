@@ -85,6 +85,14 @@ def convert(
     from any2md.theme import gradient_text
 
     console = Console()
+    if provider == "ollama":
+        import sys
+
+        from any2md.enrich import ollama
+
+        provider, _note = ollama.ensure_ready(interactive=sys.stdin.isatty())
+        if _note:
+            console.print(f"  {_note}", style="dim")
     failures = 0
     for item in targets:
         warnings: list[str] = []
