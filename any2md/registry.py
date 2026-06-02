@@ -6,6 +6,7 @@ from any2md.handlers.files import FilesHandler
 from any2md.handlers.github import GitHubHandler
 from any2md.handlers.hackernews import HackerNewsHandler
 from any2md.handlers.reddit import RedditHandler
+from any2md.handlers.remote_file import RemoteFileHandler
 from any2md.handlers.stackoverflow import StackOverflowHandler
 from any2md.handlers.twitter import TwitterHandler
 from any2md.handlers.web import WebHandler
@@ -22,6 +23,7 @@ _HANDLERS: list[Handler] = [
     WikipediaHandler(),
     TwitterHandler(),
     FilesHandler(),
+    RemoteFileHandler(),
     WebHandler(),  # catch-all — must be last
 ]
 
