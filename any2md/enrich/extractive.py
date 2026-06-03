@@ -315,6 +315,25 @@ _BOILERPLATE = re.compile(
     r"(copyright|all rights reserved|page\s+\d+\s+of\s+\d+|^\s*navigation\s*:)", re.I
 )
 _URL = re.compile(r"https?://\S+")
+_HTML_TAG = re.compile(r"<[^>]+>")
+_BOLD = re.compile(r"\*\*[^*]+\*\*")  # **author** bylines (HN/Reddit) and bold runs
+_EMAIL = re.compile(r"\S+@\S+\.\S+")
+_FIG_CAP = re.compile(r"^\s*(figure|fig\.|table)\s+\d+", re.I)
+
+
+def _deglue(text: str) -> str:
+    """Re-insert spaces inside abnormally long run-on tokens (markitdown drops them on some PDFs).
+    Only tokens > 18 chars are touched, so legitimate words and short CamelCase stay intact."""
+
+    def split(tok: str) -> str:
+        if len(tok) <= 18:
+            return tok
+        tok = re.sub(r"(?<=[a-z])(?=[A-Z])", " ", tok)
+        tok = re.sub(r"(?<=[A-Za-z])(?=\d)", " ", tok)
+        tok = re.sub(r"(?<=\d)(?=[A-Za-z])", " ", tok)
+        return tok
+
+    return " ".join(split(t) for t in text.split())
 
 
 def _words(text: str) -> list[str]:
@@ -345,8 +364,18 @@ def _clean_prose(body: str) -> str:
             continue
         if _BOILERPLATE.search(s):
             continue
+        if _FIG_CAP.match(s):  # "Figure 3 ...", "Table 2 ..." captions
+            continue
+        s = _BOLD.sub(" ", s)  # drop **author** bylines / bold runs
+        s = _HTML_TAG.sub(" ", s)  # drop HTML tags + stray attribute fragments
+        if _EMAIL.search(s):  # author / affiliation / contact lines
+            continue
+        s = s.strip()
+        if not s:
+            continue
         kept.append(s)
     text = _URL.sub(" ", " ".join(kept))
+    text = _deglue(text)
     return re.sub(r"\s+", " ", text).strip()
 
 
@@ -442,7 +471,9 @@ def _tags(prose: str, title: str, concepts: list[str]) -> list[str]:
     title_low = title.lower()
     title_words = set(_content(title))
     freq = Counter(
-        w for w in _content(prose) if w not in title_words and len(w) >= 4 and w not in _GENERIC
+        w
+        for w in _content(prose)
+        if w not in title_words and len(w) >= 4 and w not in _GENERIC and w.isalpha()
     )
 
     chosen: list[str] = []
@@ -459,8 +490,10 @@ def _tags(prose: str, title: str, concepts: list[str]) -> list[str]:
         if len(chosen) >= _MAX_TAGS:
             break
         _add(phrase)
-    for word, _ in freq.most_common():  # then distinctive frequent words
+    for word, count in freq.most_common():  # then distinctive frequent words
         if len(chosen) >= _MAX_TAGS:
+            break
+        if count < 2:  # a word seen once is rarely a real topic tag
             break
         _add(word)
     return chosen[:_MAX_TAGS]
@@ -472,24 +505,28 @@ def _key_phrases(prose: str, title: str) -> list[str]:
     # nouns; words capitalized only at a sentence start are not. This filters "Latency"/"Read".
     mid_caps = {m.lower() for m in re.findall(r"[a-z0-9,]\s+([A-Z][a-zA-Z0-9]+)", prose)}
 
-    raw = re.findall(r"\b([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+)*)\b", prose)
     cleaned = []
-    for phrase in raw:
-        words = phrase.split()
-        while words and words[0].lower() in _STOPWORDS:  # drop leading "The"/"This"
-            words = words[1:]
-        if not words:
-            continue
-        candidate = " ".join(words)
-        low = candidate.lower()
-        if len(candidate) <= 2 or low in title_low or low in _STOPWORDS:
-            continue  # skip fragments, the title itself, bare stopwords
-        if low in _COMMON_PROPER:
-            continue  # languages / months / "Figure"/"Table" — proper nouns, but not topics
-        # A single capitalized word counts only if it's a genuine mid-sentence proper noun.
-        if len(words) == 1 and words[0].lower() not in mid_caps:
-            continue
-        cleaned.append(candidate)
+    # Scan sentence-by-sentence so a phrase never merges across a sentence/heading boundary
+    # (that produced junk like "Iterables When").
+    for sentence in re.split(r"(?<=[.!?])\s+", prose):
+        for phrase in re.findall(r"\b([A-Z][a-zA-Z0-9]+(?:\s+[A-Z][a-zA-Z0-9]+)*)\b", sentence):
+            words = phrase.split()
+            while words and words[0].lower() in _STOPWORDS:  # drop leading "The"/"This"
+                words = words[1:]
+            if not words:
+                continue
+            if any(re.search(r"[a-z][A-Z]", w) for w in words):  # camelCase author tokens
+                continue
+            candidate = " ".join(words)
+            low = candidate.lower()
+            if len(candidate) <= 2 or low in title_low or low in _STOPWORDS:
+                continue  # skip fragments, the title itself, bare stopwords
+            if low in _COMMON_PROPER:
+                continue  # languages / months / "Figure"/"Table" — not topics
+            # A single capitalized word counts only if it's a genuine mid-sentence proper noun.
+            if len(words) == 1 and words[0].lower() not in mid_caps:
+                continue
+            cleaned.append(candidate)
     counts = Counter(cleaned)
     # Prefer multi-word concepts, then frequency.
     ranked = sorted(counts, key=lambda p: (len(p.split()) > 1, counts[p]), reverse=True)
