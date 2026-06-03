@@ -12,6 +12,7 @@ from html import unescape
 
 import httpx
 
+from any2md.errors import SourceUnavailable
 from any2md.handlers.base import Handler
 from any2md.models import Document
 
@@ -48,6 +49,11 @@ def _fetch_rss(url: str) -> str:
 def _subreddit_from_url(url: str) -> str:
     m = _SUBREDDIT_RE.search(url)
     return m.group(1) if m else ""
+
+
+def _old_reddit(url: str) -> str:
+    """Swap the host to old.reddit.com — its .json is blocked less aggressively."""
+    return re.sub(r"https?://(www\.)?reddit\.com", "https://old.reddit.com", url)
 
 
 def _strip_html(html: str) -> str:
@@ -162,5 +168,12 @@ class RedditHandler(Handler):
         try:
             return _extract_json(target, _fetch_json(target))
         except httpx.HTTPError:
-            # .json blocked/unreachable → fall back to the keyless Atom feed.
+            pass
+        try:  # old.reddit.com is blocked less often than www
+            return _extract_json(target, _fetch_json(_old_reddit(target)))
+        except httpx.HTTPError:
+            pass
+        try:  # last resort: the keyless Atom feed (flat, no scores)
             return _extract_rss(target, _fetch_rss(target))
+        except httpx.HTTPError as exc:
+            raise SourceUnavailable(f"reddit blocked this request ({exc})") from exc

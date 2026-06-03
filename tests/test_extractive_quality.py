@@ -136,3 +136,93 @@ def test_empty_body_is_safe():
     assert out["key_points"] == []
     assert out["tags"] == []
     assert out["concepts"] == []
+
+
+def _varied_body(n):
+    """n distinct, low-overlap sentences so MMR keeps them (depth math is what we test).
+
+    Uses random 6-letter words (all > 2 chars so none are dropped as too-short content words),
+    drawn from a large pool so any two sentences share almost nothing → no MMR dedup collapse.
+    """
+    import random
+
+    rng = random.Random(1)
+    vocab: list[str] = []
+    seen: set[str] = set()
+    while len(vocab) < 80:
+        word = "".join(rng.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(6))
+        if word not in seen:
+            seen.add(word)
+            vocab.append(word)
+    out = []
+    for _ in range(n):
+        words = rng.sample(vocab, 8)
+        words[0] = words[0].capitalize()
+        out.append(" ".join(words) + ".")
+    return " ".join(out)
+
+
+def test_depth_is_monotonic_and_bounded_and_tldr_is_mini():
+    import re
+
+    from any2md import depth
+
+    s = ExtractiveSummarizer()
+    body = _varied_body(120)  # long source so caps bite
+    counts = {}
+    for level in ("low", "medium", "high"):
+        lo, hi = depth.bounds(level)
+        out = s.summarize(
+            "Governing Principles", body, ratio=depth.ratio(level), kp_min=lo, kp_max=hi
+        )
+        counts[level] = len(out["key_points"])
+        tldr_sents = [x for x in re.split(r"(?<=[.!?])\s+", out["tldr"].strip()) if x]
+        assert len(tldr_sents) <= 3  # TL;DR stays mini regardless of source length
+
+    assert counts["low"] < counts["medium"] < counts["high"]  # depth visibly changes output
+    assert counts["low"] >= 3 and counts["high"] <= 20  # within the tiered caps
+
+
+def test_html_and_bylines_and_emails_do_not_leak():
+    body = (
+        '<a href="https://x.com"><img src="logo.png"></a> '
+        "Focus on building applications, not infrastructure, with this framework. "
+        "**nefele** I saw your demo at the conference and it looked great overall. "
+        "AshishVaswani noam@google.com NikiParmar affiliations listed here. "
+        "Figure 3 shows the attention heatmap across layers in detail. "
+        "The framework provides automatic validation and serialization for requests."
+    )
+    out = ExtractiveSummarizer().summarize(
+        "Framework Overview", body, ratio=0.5, kp_min=3, kp_max=20
+    )
+    blob = out["tldr"] + " " + " ".join(out["key_points"]) + " " + " ".join(out["tags"])
+    assert "<" not in blob and ">" not in blob  # no HTML tags/attributes
+    assert "**" not in blob  # no markdown bold bylines
+    assert "nefele" not in blob  # the byline word itself is gone
+    assert "@google.com" not in blob and "noam" not in blob  # author/email block dropped
+    assert "Figure 3" not in blob  # figure caption dropped
+
+
+def test_keyphrases_drop_camelcase_authors_and_do_not_merge_across_sentences():
+    from any2md.enrich.extractive import _key_phrases
+
+    prose = "We used Multi Head Attention. Generators are lazy. Iterables come first."
+    phrases = _key_phrases(prose, "Title")
+    assert "AshishVaswani" not in phrases
+    assert all(" When" not in p and "Iterables Generators" not in p for p in phrases)
+
+
+def test_deglue_splits_long_runon_tokens_only():
+    from any2md.enrich.extractive import _deglue
+
+    assert "BLEU" in _deglue("ourmodelachievesanewBLEUscoreofManyThings")
+    assert _deglue("GitHub") == "GitHub"  # short legit CamelCase untouched
+
+
+def test_tags_drop_singletons_and_nonalpha():
+    from any2md.enrich.extractive import _tags
+
+    prose = "transformer transformer attention attention attention wmt2014 gpus."
+    tags = _tags(prose, "Title", [])
+    assert "attention" in tags
+    assert "wmt2014" not in tags  # non-alpha dropped

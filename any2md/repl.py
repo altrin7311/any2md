@@ -199,7 +199,10 @@ class Repl:
         if cmd == "/output":
             if not arg:
                 return f"output_dir = {self.output_dir}"
+            from any2md import config
+
             self.output_dir = _clean_dropped_path(arg)
+            config.set_value("output_dir", self.output_dir)
             return f"output_dir set to {self.output_dir}"
         if cmd == "/provider":
             return self._set_provider(arg)
@@ -451,7 +454,15 @@ class Repl:
         if config.is_first_run():
             await self._first_run(console, loop)
 
+        if self.provider == "ollama":
+            from any2md.enrich import ollama
+
+            self.provider, _note = ollama.ensure_ready(interactive=sys.stdin.isatty())
+            if _note:
+                console.print(Text(f"  {_note}", style="dim"))
+
         print_welcome(console)
+        console.print(Text(f"  output: {self.output_dir}", style="dim"))
 
         session = PromptSession(
             lexer=_make_lexer(),

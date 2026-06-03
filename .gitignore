@@ -10,3 +10,6 @@ dist/
 .ruff_cache/
 .coverage
 output/
+
+# graphify knowledge-graph build artifacts (regenerate with /graphify)
+graphify-out/

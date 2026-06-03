@@ -16,6 +16,7 @@ DEFAULTS: dict[str, object] = {
     "provider": "extractive",  # free, zero-setup summaries; "ollama" or "none" also valid
     "whisper_fallback": False,
     "depth": "medium",  # summary depth: low|medium|high — fraction of source kept (see depth.py)
+    "ollama_autopull": None,  # None = ask once before a large model pull; True/False remembers it
 }
 
 # User-facing aliases → canonical config key.

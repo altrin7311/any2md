@@ -68,10 +68,15 @@ def test_unknown_line_does_not_submit(tmp_path):
     assert "?" in out or "unrecognized" in out.lower() or "not" in out.lower()
 
 
-def test_output_command_updates_config(tmp_path):
+def test_output_command_updates_config(tmp_path, monkeypatch):
+    monkeypatch.setenv("ANY2MD_CONFIG", str(tmp_path / "c.toml"))
+    monkeypatch.delenv("ANY2MD_OUTPUT_DIR", raising=False)
     r = _repl(tmp_path)
     r.handle("/output /new/dir")
     assert r.output_dir == "/new/dir"
+    from any2md import config
+
+    assert config.get("output_dir") == "/new/dir"  # persisted so next launch remembers it
 
 
 def test_provider_command_updates_config(tmp_path, monkeypatch):

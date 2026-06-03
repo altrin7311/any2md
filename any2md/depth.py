@@ -5,11 +5,18 @@ hints for the /depth picker live in eta.py's stats file.
 """
 
 LEVELS = ["low", "medium", "high", "raw"]
-RATIOS = {"low": 0.10, "medium": 0.30, "high": 0.50}
+RATIOS = {"low": 0.10, "medium": 0.20, "high": 0.35}
+# Per-level key-point budget (min, max). The chosen count is the ratio of the source clamped
+# into this band, so levels never collapse together and never explode on long sources.
+BOUNDS = {"low": (3, 6), "medium": (6, 12), "high": (10, 20)}
 
 
 def ratio(level: str) -> float:
     return RATIOS.get(level, RATIOS["medium"])
+
+
+def bounds(level: str) -> tuple[int, int]:
+    return BOUNDS.get(level, BOUNDS["medium"])
 
 
 def is_raw(level: str) -> bool:
