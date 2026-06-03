@@ -203,3 +203,22 @@ def test_convert_skips_cleanly_on_source_unavailable(tmp_path, monkeypatch):
     )
     assert out is None  # clean skip, no file written
     assert any(e.startswith("warn:skipped:") for e in events)
+
+
+def test_convert_skips_on_http_status_error(tmp_path, monkeypatch):
+    import httpx
+
+    from any2md import pipeline, registry
+
+    class _Boom:
+        def extract(self, target):
+            req = httpx.Request("GET", "https://api.github.com/repos/x/y")
+            raise httpx.HTTPStatusError(
+                "404", request=req, response=httpx.Response(404, request=req)
+            )
+
+    monkeypatch.setattr(registry, "detect", lambda target: _Boom())
+    events = []
+    out = pipeline.convert("https://github.com/x/y", str(tmp_path), "none", on_event=events.append)
+    assert out is None
+    assert any(e.startswith("warn:skipped") for e in events)

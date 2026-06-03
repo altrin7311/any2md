@@ -75,3 +75,24 @@ def test_github_extract_includes_topics():
         doc = GitHubHandler().extract("https://github.com/karpathy/nanoGPT")
 
     assert "gpt" in doc.metadata["topics"]
+
+
+def test_github_fetches_follow_redirects(monkeypatch):
+    import any2md.handlers.github as gh
+
+    seen = {}
+
+    class _Resp:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {}
+
+    def fake_get(url, **kwargs):
+        seen[url] = kwargs
+        return _Resp()
+
+    monkeypatch.setattr(gh.httpx, "get", fake_get)
+    gh._fetch_repo("octocat", "Hello-World")
+    assert all(kw.get("follow_redirects") is True for kw in seen.values())

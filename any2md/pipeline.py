@@ -3,6 +3,8 @@
 from collections.abc import Callable
 from pathlib import Path
 
+import httpx
+
 from any2md import config, eta, registry, writer
 from any2md.depth import bounds as depth_bounds
 from any2md.depth import ratio as depth_ratio
@@ -42,6 +44,9 @@ def convert(
         doc = handler.extract(target)
     except SourceUnavailable as exc:
         emit("warn:skipped: " + str(exc))
+        return None
+    except httpx.HTTPStatusError as exc:
+        emit(f"warn:skipped: source unavailable (HTTP {exc.response.status_code})")
         return None
     if doc.source_url:  # clean tracking junk so the vault link is canonical + dedup works
         doc.source_url = canonical_url(doc.source_url)
