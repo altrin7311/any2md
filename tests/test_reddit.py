@@ -96,3 +96,28 @@ def test_reddit_rss_sets_upload_date_from_first_entry():
         )
 
     assert doc.upload_date == "2026-05-28"
+
+
+def test_old_reddit_swaps_host():
+    from any2md.handlers.reddit import _old_reddit
+
+    assert (
+        _old_reddit("https://www.reddit.com/r/x/comments/abc/t/")
+        == "https://old.reddit.com/r/x/comments/abc/t/"
+    )
+
+
+def test_total_block_raises_source_unavailable(monkeypatch):
+    import pytest
+
+    import any2md.handlers.reddit as rd
+    from any2md.errors import SourceUnavailable
+
+    def boom(url):
+        req = httpx.Request("GET", url)
+        raise httpx.HTTPStatusError("403", request=req, response=httpx.Response(403, request=req))
+
+    monkeypatch.setattr(rd, "_fetch_json", boom)
+    monkeypatch.setattr(rd, "_fetch_rss", boom)
+    with pytest.raises(SourceUnavailable):
+        rd.RedditHandler().extract("https://www.reddit.com/r/x/comments/abc/title/")
