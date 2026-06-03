@@ -42,7 +42,9 @@ class OllamaSummarizer(Summarizer):
         self.url = (url or os.environ.get("OLLAMA_URL", "http://localhost:11434")).rstrip("/")
         self.model = model or os.environ.get("OLLAMA_MODEL", "llama3.2")
 
-    def summarize(self, title: str, body: str, *, ratio: float = 0.2) -> dict:
+    def summarize(
+        self, title: str, body: str, *, ratio: float = 0.2, kp_min: int = 3, kp_max: int = 20
+    ) -> dict:
         import httpx  # lazy
 
         prompt = _PROMPT.format(pct=round(ratio * 100), title=title, body=body[:_MAX_BODY_CHARS])

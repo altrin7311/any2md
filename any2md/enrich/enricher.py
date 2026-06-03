@@ -41,14 +41,22 @@ def inline_links(text: str, phrases: list[str]) -> str:
     return text
 
 
-def enrich(doc: Document, summarizer: Summarizer | None, ratio: float = 0.2) -> bool:
+def enrich(
+    doc: Document,
+    summarizer: Summarizer | None,
+    ratio: float = 0.2,
+    kp_min: int = 3,
+    kp_max: int = 20,
+) -> bool:
     """Distill the doc into TL;DR + key points (with [[links]] inlined) at the given depth ratio.
     Returns True on success (or no-op None summarizer), False if the summarizer raised — so
     callers can react (see enrich_with_fallback). Best-effort: never propagates an error."""
     if summarizer is None:
         return True
     try:
-        data = summarizer.summarize(doc.title, doc.body_markdown, ratio=ratio)
+        data = summarizer.summarize(
+            doc.title, doc.body_markdown, ratio=ratio, kp_min=kp_min, kp_max=kp_max
+        )
         concepts = list(data.get("concepts") or [])
         doc.summary = inline_links(data.get("tldr") or "", concepts) or None
         doc.key_points = [inline_links(p, concepts) for p in (data.get("key_points") or [])]
@@ -60,9 +68,11 @@ def enrich(doc: Document, summarizer: Summarizer | None, ratio: float = 0.2) -> 
         return False
 
 
-def enrich_with_fallback(doc: Document, provider: str, ratio: float = 0.2) -> None:
+def enrich_with_fallback(
+    doc: Document, provider: str, ratio: float = 0.2, kp_min: int = 3, kp_max: int = 20
+) -> None:
     """Enrich with the chosen provider; if ollama is unreachable, transparently fall back to
     the built-in extractive summarizer and record a terminal-only warning (no silent lie)."""
-    if not enrich(doc, get_summarizer(provider), ratio) and provider == "ollama":
-        doc.warnings.append("ollama unreachable — used extractive instead")
-        enrich(doc, get_summarizer("extractive"), ratio)
+    if not enrich(doc, get_summarizer(provider), ratio, kp_min, kp_max) and provider == "ollama":
+        doc.warnings.append("ollama summarize failed — used extractive instead")
+        enrich(doc, get_summarizer("extractive"), ratio, kp_min, kp_max)
