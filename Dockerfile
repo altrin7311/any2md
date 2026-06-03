@@ -1,10 +1,15 @@
 # Any2MD — slim image for serve mode (Docker / Railway).
 FROM python:3.11-slim
 
-# System deps: ffmpeg for yt-dlp Whisper fallback, tesseract for image OCR via markitdown.
+# System deps: ffmpeg for yt-dlp Whisper fallback, tesseract for image OCR via markitdown,
+# curl/unzip to install deno (yt-dlp's default JS runtime for reliable YouTube extraction).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ffmpeg tesseract-ocr \
+    && apt-get install -y --no-install-recommends ffmpeg tesseract-ocr curl unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# deno = yt-dlp's default JS runtime; install to /usr/local so /usr/local/bin/deno is on PATH.
+ENV DENO_INSTALL=/usr/local
+RUN curl -fsSL https://deno.land/install.sh | sh
 
 WORKDIR /app
 COPY . .

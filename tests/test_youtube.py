@@ -90,7 +90,11 @@ def test_parse_vtt_dedups_rolling_lines():
 
 
 def test_youtube_no_captions_without_ffmpeg_warns(monkeypatch):
-    monkeypatch.setattr("any2md.handlers.youtube.shutil.which", lambda name: None)
+    # deno present (JS runtime ok) so we reach the ffmpeg-specific warning branch
+    monkeypatch.setattr(
+        "any2md.handlers.youtube.shutil.which",
+        lambda name: "/usr/bin/deno" if name == "deno" else None,
+    )
     with patch("any2md.handlers.youtube._ydl_extract", return_value=_FAKE_INFO):
         doc = YouTubeHandler().extract("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
     assert any("ffmpeg" in w for w in doc.warnings)
@@ -112,3 +116,15 @@ def test_youtube_with_captions_no_ffmpeg_warning_even_without_ffmpeg(monkeypatch
         doc = YouTubeHandler().extract("https://www.youtube.com/watch?v=dQw4w9WgXcQ")
     assert doc.body_markdown == "real transcript"
     assert not any("ffmpeg" in w for w in doc.warnings)
+
+
+def test_js_runtime_available_detects_deno(monkeypatch):
+    from any2md.handlers import youtube
+
+    monkeypatch.setattr(
+        youtube.shutil, "which", lambda name: "/usr/bin/deno" if name == "deno" else None
+    )
+    assert youtube.js_runtime_available() is True
+
+    monkeypatch.setattr(youtube.shutil, "which", lambda name: None)
+    assert youtube.js_runtime_available() is False
