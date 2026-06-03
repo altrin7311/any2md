@@ -59,6 +59,11 @@ def _get_captions(info: dict) -> str:
     return ""
 
 
+def js_runtime_available() -> bool:
+    """yt-dlp needs a JS runtime (deno/node) for reliable extraction on current YouTube."""
+    return bool(shutil.which("deno") or shutil.which("node"))
+
+
 class YouTubeHandler(Handler):
     source_type = "youtube"
 
@@ -86,8 +91,13 @@ class YouTubeHandler(Handler):
         # No captions → Whisper audio transcription would be the fallback, but that needs ffmpeg
         # (which pipx can't install). Warn rather than silently leaving only the description.
         warnings: list[str] = []
-        if not captions and shutil.which("ffmpeg") is None:
-            warnings.append("no captions found; install ffmpeg for audio transcription")
+        if not captions:
+            if not js_runtime_available():
+                warnings.append(
+                    "youtube extraction is degraded without a JS runtime — install deno"
+                )
+            elif shutil.which("ffmpeg") is None:
+                warnings.append("no captions found; install ffmpeg for audio transcription")
 
         return Document(
             title=title,
