@@ -45,7 +45,9 @@ def test_inline_links_multiple_phrases():
 
 
 class FakeSummarizer(Summarizer):
-    def summarize(self, title: str, body: str, *, ratio: float = 0.2) -> dict:
+    def summarize(
+        self, title: str, body: str, *, ratio: float = 0.2, kp_min: int = 3, kp_max: int = 20
+    ) -> dict:
         return {
             "tldr": "Neural Net basics in one line.",
             "key_points": ["Backprop trains the Neural Net", "Gradients flow backward"],
@@ -97,7 +99,9 @@ def test_summarizer_none_leaves_doc_unchanged():
 
 def test_enrich_swallows_summarizer_errors():
     class Boom(Summarizer):
-        def summarize(self, title: str, body: str, *, ratio: float = 0.2) -> dict:
+        def summarize(
+            self, title: str, body: str, *, ratio: float = 0.2, kp_min: int = 3, kp_max: int = 20
+        ) -> dict:
             raise RuntimeError("model down")
 
     doc = _doc()
@@ -106,7 +110,9 @@ def test_enrich_swallows_summarizer_errors():
 
 
 class _Boom(Summarizer):
-    def summarize(self, title: str, body: str, *, ratio: float = 0.2) -> dict:
+    def summarize(
+        self, title: str, body: str, *, ratio: float = 0.2, kp_min: int = 3, kp_max: int = 20
+    ) -> dict:
         raise RuntimeError("model down")
 
 
@@ -133,7 +139,7 @@ def test_enrich_with_fallback_ollama_down_uses_extractive(monkeypatch):
     doc = _doc()
     enricher.enrich_with_fallback(doc, "ollama")
     assert "basics in one line" in doc.summary  # extractive (Fake) filled it after ollama failed
-    assert any("ollama unreachable" in w for w in doc.warnings)
+    assert any("ollama summarize failed" in w for w in doc.warnings)
 
 
 def test_enrich_with_fallback_success_no_warning(monkeypatch):
@@ -218,7 +224,9 @@ def test_normalize_tag(raw, expected):
 
 
 class _SpacedTagSummarizer(Summarizer):
-    def summarize(self, title: str, body: str, *, ratio: float = 0.2) -> dict:
+    def summarize(
+        self, title: str, body: str, *, ratio: float = 0.2, kp_min: int = 3, kp_max: int = 20
+    ) -> dict:
         # Ollama happily returns multiword, mixed-case, and duplicate tags — all invalid/messy
         # as Obsidian tags (which cannot contain spaces).
         return {

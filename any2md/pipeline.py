@@ -4,6 +4,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from any2md import config, eta, registry, writer
+from any2md.depth import bounds as depth_bounds
 from any2md.depth import ratio as depth_ratio
 from any2md.enrich.enricher import enrich_with_fallback
 from any2md.errors import SourceUnavailable
@@ -46,7 +47,8 @@ def convert(
         doc.source_url = canonical_url(doc.source_url)
     emit("enriching")
     if not is_raw(level):
-        enrich_with_fallback(doc, provider, depth_ratio(level))
+        kp_min, kp_max = depth_bounds(level)
+        enrich_with_fallback(doc, provider, depth_ratio(level), kp_min, kp_max)
     emit("writing")
     # Nothing to show at all (empty body and no distillation) → skip, don't write a junk note.
     if not doc.summary and not doc.key_points and not doc.body_markdown.strip():

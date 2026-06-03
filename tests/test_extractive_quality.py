@@ -136,3 +136,48 @@ def test_empty_body_is_safe():
     assert out["key_points"] == []
     assert out["tags"] == []
     assert out["concepts"] == []
+
+
+def _varied_body(n):
+    """n distinct, low-overlap sentences so MMR keeps them (depth math is what we test).
+
+    Uses random 6-letter words (all > 2 chars so none are dropped as too-short content words),
+    drawn from a large pool so any two sentences share almost nothing → no MMR dedup collapse.
+    """
+    import random
+
+    rng = random.Random(1)
+    vocab: list[str] = []
+    seen: set[str] = set()
+    while len(vocab) < 80:
+        word = "".join(rng.choice("abcdefghijklmnopqrstuvwxyz") for _ in range(6))
+        if word not in seen:
+            seen.add(word)
+            vocab.append(word)
+    out = []
+    for _ in range(n):
+        words = rng.sample(vocab, 8)
+        words[0] = words[0].capitalize()
+        out.append(" ".join(words) + ".")
+    return " ".join(out)
+
+
+def test_depth_is_monotonic_and_bounded_and_tldr_is_mini():
+    import re
+
+    from any2md import depth
+
+    s = ExtractiveSummarizer()
+    body = _varied_body(120)  # long source so caps bite
+    counts = {}
+    for level in ("low", "medium", "high"):
+        lo, hi = depth.bounds(level)
+        out = s.summarize(
+            "Governing Principles", body, ratio=depth.ratio(level), kp_min=lo, kp_max=hi
+        )
+        counts[level] = len(out["key_points"])
+        tldr_sents = [x for x in re.split(r"(?<=[.!?])\s+", out["tldr"].strip()) if x]
+        assert len(tldr_sents) <= 3  # TL;DR stays mini regardless of source length
+
+    assert counts["low"] < counts["medium"] < counts["high"]  # depth visibly changes output
+    assert counts["low"] >= 3 and counts["high"] <= 20  # within the tiered caps

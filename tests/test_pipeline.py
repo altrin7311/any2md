@@ -131,11 +131,11 @@ def test_convert_falls_back_to_extractive_when_ollama_down(tmp_path, monkeypatch
     monkeypatch.setattr(pipeline.registry, "detect", lambda t: _Handler(doc))
 
     class _Boom(Summarizer):
-        def summarize(self, title, body, *, ratio=0.2):
+        def summarize(self, title, body, *, ratio=0.2, kp_min=3, kp_max=20):
             raise RuntimeError("connection refused")
 
     class _Fake(Summarizer):
-        def summarize(self, title, body, *, ratio=0.2):
+        def summarize(self, title, body, *, ratio=0.2, kp_min=3, kp_max=20):
             return {"tldr": "fallback summary", "key_points": [], "concepts": [], "tags": []}
 
     from any2md.enrich import enricher
@@ -148,14 +148,14 @@ def test_convert_falls_back_to_extractive_when_ollama_down(tmp_path, monkeypatch
     events: list[str] = []
     convert("https://example.com/x", tmp_path, provider="ollama", on_event=events.append)
     assert doc.summary == "fallback summary"
-    assert any("ollama unreachable" in w for w in _collect_warns(events))
+    assert any("ollama summarize failed" in w for w in _collect_warns(events))
 
 
 class _RatioRecorder(Summarizer):
     def __init__(self, sink):
         self.sink = sink
 
-    def summarize(self, title, body, *, ratio=0.2):
+    def summarize(self, title, body, *, ratio=0.2, kp_min=3, kp_max=20):
         self.sink["ratio"] = ratio
         return {"tldr": "t", "key_points": [], "concepts": [], "tags": []}
 
@@ -168,7 +168,7 @@ def test_convert_passes_explicit_depth_ratio(tmp_path, monkeypatch):
 
     monkeypatch.setattr(enricher, "get_summarizer", lambda name: _RatioRecorder(seen))
     convert("u", tmp_path, provider="extractive", depth="high", on_event=lambda s: None)
-    assert seen["ratio"] == 0.50
+    assert seen["ratio"] == 0.35
 
 
 def test_convert_falls_back_to_config_depth(tmp_path, monkeypatch):

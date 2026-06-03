@@ -147,6 +147,7 @@ _MAX_WIKILINKS = 5
 _DAMPING = 0.85
 _ITERATIONS = 30
 _MMR_THRESHOLD = 0.5  # skip a candidate this similar to an already-picked sentence
+_TLDR_MAX = 3  # the TL;DR is always a mini 1-3 sentence lead, independent of source length
 
 # Generic descriptors / academic filler that score high on frequency but carry no topic signal.
 # Tags drawn from these read as noise ("based", "best", "dominant") — drop them.
@@ -390,9 +391,11 @@ def _textrank(word_sets: list[set[str]]) -> list[float]:
     return scores
 
 
-def _select(title: str, sentences: list[str], ratio: float) -> tuple[list[str], list[str]]:
-    """Distill to ~ratio of the source by word count. Returns (tldr_sentences, key_point_sentences)
-    in reading order: the top-scoring quarter become the TL;DR, the rest become key points."""
+def _select(
+    title: str, sentences: list[str], ratio: float, kp_min: int, kp_max: int
+) -> tuple[list[str], list[str]]:
+    """Distill to a mini TL;DR (<= _TLDR_MAX sentences) plus key points = round(ratio*n) clamped
+    into [kp_min, kp_max]. Returns (tldr_sentences, key_point_sentences) in reading order."""
     if not sentences:
         return [], []
 
@@ -411,13 +414,15 @@ def _select(title: str, sentences: list[str], ratio: float) -> tuple[list[str], 
         final.append(rank * (1 + lead_bonus + 0.3 * overlap + cue))
 
     n = len(sentences)
-    max_picks = max(8, min(n, round(ratio * n)))
+    n_kp = max(kp_min, min(kp_max, round(ratio * n)))  # key-point budget, clamped per depth level
+    n_tldr = min(_TLDR_MAX, n)
+    target = n_tldr + n_kp
     order = sorted(range(n), key=lambda i: final[i], reverse=True)
 
-    # Greedy MMR: take highest-scoring non-redundant sentences up to max_picks.
+    # Greedy MMR: take highest-scoring non-redundant sentences up to the combined target.
     picked: list[int] = []  # in score order
     for i in order:
-        if len(picked) >= max_picks:
+        if len(picked) >= target:
             break
         if any(_similarity(word_sets[i], word_sets[p]) > _MMR_THRESHOLD for p in picked):
             continue
@@ -425,7 +430,7 @@ def _select(title: str, sentences: list[str], ratio: float) -> tuple[list[str], 
     if not picked:
         picked = [order[0]]
 
-    n_tldr = max(1, math.ceil(len(picked) * 0.25))
+    n_tldr = min(n_tldr, len(picked))
     tldr_idx = sorted(picked[:n_tldr])  # highest-scoring → reading order
     kp_idx = sorted(picked[n_tldr:])
     return [sentences[i] for i in tldr_idx], [sentences[i] for i in kp_idx]
@@ -492,11 +497,13 @@ def _key_phrases(prose: str, title: str) -> list[str]:
 
 
 class ExtractiveSummarizer(Summarizer):
-    def summarize(self, title: str, body: str, *, ratio: float = 0.2) -> dict:
+    def summarize(
+        self, title: str, body: str, *, ratio: float = 0.2, kp_min: int = 3, kp_max: int = 20
+    ) -> dict:
         prose = _clean_prose(body)
         if not _content(prose):
             return {"tldr": "", "key_points": [], "tags": [], "concepts": []}
-        tldr, key_points = _select(title, _split_sentences(prose), ratio)
+        tldr, key_points = _select(title, _split_sentences(prose), ratio, kp_min, kp_max)
         concepts = _key_phrases(prose, title)
         return {
             "tldr": " ".join(tldr),
