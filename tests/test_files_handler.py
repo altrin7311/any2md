@@ -114,3 +114,15 @@ def test_non_image_conversion_error_propagates(tmp_path, monkeypatch):
 
     with pytest.raises(RuntimeError):
         h.extract(str(pdf))
+
+
+def test_files_handler_docx_maps_source_type(tmp_path, monkeypatch):
+    doc_path = tmp_path / "report.docx"
+    doc_path.write_bytes(b"PK\x03\x04")  # zip magic; convert is mocked
+    h = FilesHandler()
+    monkeypatch.setattr(
+        h._md, "convert", lambda *a, **k: _FakeResult(title="Report", text="Quarterly update.")
+    )
+    doc = h.extract(str(doc_path))
+    assert doc.source_type == "docx"
+    assert "Quarterly" in doc.body_markdown

@@ -18,13 +18,20 @@ _HEADERS = {
 
 
 def _fetch_repo(owner: str, repo: str) -> dict:
-    resp = httpx.get(f"{_API_BASE}/repos/{owner}/{repo}", headers=_HEADERS, timeout=15)
+    resp = httpx.get(
+        f"{_API_BASE}/repos/{owner}/{repo}", headers=_HEADERS, follow_redirects=True, timeout=15
+    )
     resp.raise_for_status()
     return resp.json()
 
 
 def _fetch_readme(owner: str, repo: str) -> str:
-    resp = httpx.get(f"{_API_BASE}/repos/{owner}/{repo}/readme", headers=_HEADERS, timeout=15)
+    resp = httpx.get(
+        f"{_API_BASE}/repos/{owner}/{repo}/readme",
+        headers=_HEADERS,
+        follow_redirects=True,
+        timeout=15,
+    )
     if resp.status_code == 404:
         return ""
     resp.raise_for_status()
@@ -33,7 +40,12 @@ def _fetch_readme(owner: str, repo: str) -> str:
 
 
 def _fetch_languages(owner: str, repo: str) -> list[str]:
-    resp = httpx.get(f"{_API_BASE}/repos/{owner}/{repo}/languages", headers=_HEADERS, timeout=15)
+    resp = httpx.get(
+        f"{_API_BASE}/repos/{owner}/{repo}/languages",
+        headers=_HEADERS,
+        follow_redirects=True,
+        timeout=15,
+    )
     if not resp.is_success:
         return []
     return list(resp.json().keys())
