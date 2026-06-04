@@ -46,8 +46,8 @@ def test_depth_hint_text():
     from any2md.theme import depth_hint
 
     assert depth_hint("low", 10) == "~10% of source · ~10 lines"
-    assert depth_hint("medium", 40) == "~20% of source · ~40 lines"
-    assert depth_hint("high", 80) == "~35% of source · ~80 lines"
+    assert depth_hint("medium", 40) == "~30% of source · ~40 lines"
+    assert depth_hint("high", 80) == "~75% of source · ~80 lines"
     assert depth_hint("raw", 0) == "full source · no summarization"
 
 

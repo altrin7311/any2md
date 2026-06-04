@@ -6,15 +6,15 @@ from any2md import config, eta
 
 def test_ratio_per_level():
     assert depth.ratio("low") == 0.10
-    assert depth.ratio("medium") == 0.20
-    assert depth.ratio("high") == 0.35
+    assert depth.ratio("medium") == 0.30
+    assert depth.ratio("high") == 0.75
 
 
 def test_bounds_are_tiered():
     assert depth.bounds("low") == (3, 6)
-    assert depth.bounds("medium") == (6, 12)
-    assert depth.bounds("high") == (10, 20)
-    assert depth.bounds("unknown") == (6, 12)  # defaults to medium
+    assert depth.bounds("medium") == (8, 18)
+    assert depth.bounds("high") == (16, 200)
+    assert depth.bounds("unknown") == (8, 18)  # defaults to medium
 
 
 def test_raw_level_exists_and_is_terminal():

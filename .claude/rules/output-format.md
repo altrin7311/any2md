@@ -41,7 +41,7 @@ source (no per-source section headings):
 ```
 - `#tags` live in frontmatter; `[[wikilinks]]` are **inlined** into the TL;DR + Key Points (first
   whole-word occurrence of each concept) — there is no separate "Concepts" section.
-- **Depth** controls N via the `depth` config (low 10% · medium 20% · high 35% of the source),
+- **Depth** controls N via the `depth` config (low 10% · medium 30% · high 75% of the source),
   set with the REPL `/depth` picker, `--depth`, or `ANY2MD_DEPTH`. See `depth.py`.
 
 ## Passthrough (no distillation)

@@ -180,7 +180,8 @@ def test_depth_is_monotonic_and_bounded_and_tldr_is_mini():
         assert len(tldr_sents) <= 3  # TL;DR stays mini regardless of source length
 
     assert counts["low"] < counts["medium"] < counts["high"]  # depth visibly changes output
-    assert counts["low"] >= 3 and counts["high"] <= 20  # within the tiered caps
+    assert counts["low"] <= 6  # low stays a tight digest
+    assert counts["high"] >= 30  # high keeps most of the source, not a truncated handful
 
 
 def test_html_and_bylines_and_emails_do_not_leak():

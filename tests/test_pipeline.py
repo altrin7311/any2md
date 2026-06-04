@@ -168,7 +168,7 @@ def test_convert_passes_explicit_depth_ratio(tmp_path, monkeypatch):
 
     monkeypatch.setattr(enricher, "get_summarizer", lambda name: _RatioRecorder(seen))
     convert("u", tmp_path, provider="extractive", depth="high", on_event=lambda s: None)
-    assert seen["ratio"] == 0.35
+    assert seen["ratio"] == 0.75
 
 
 def test_convert_falls_back_to_config_depth(tmp_path, monkeypatch):
